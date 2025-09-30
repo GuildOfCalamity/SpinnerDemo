@@ -49,3 +49,4 @@ public enum SpinnerRenderShape
 }
 ```
 
+![Running](./src/Assets/Demo.gif)
