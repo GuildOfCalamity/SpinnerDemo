@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
 namespace SpinnerDemo.Controls;
@@ -3113,6 +3115,26 @@ public partial class Spinner : UserControl
         return g + shift;
     }
     #endregion
+
+    void SaveSpinnerAsPng(Canvas canvas, string filePath)
+    {
+        if (canvas == null) { return; }
+        Size size = new Size(canvas.ActualWidth, canvas.ActualHeight);
+        canvas.Measure(size);
+        canvas.Arrange(new Rect(size));
+        var rtb = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(canvas);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        try
+        {
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            {
+                encoder.Save(fs);
+            }
+        }
+        catch (Exception) { }
+    }
 }
 
 #region [Support Classes]

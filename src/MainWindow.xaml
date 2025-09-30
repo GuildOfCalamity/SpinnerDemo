@@ -14,6 +14,7 @@
     FontFamily="Aptos"
     KeyUp="Window_KeyUp"
     Loaded="Window_Loaded"
+    Unloaded="Window_Unloaded"
     WindowStartupLocation="CenterScreen"
     WindowState="Normal"
     WindowStyle="None"

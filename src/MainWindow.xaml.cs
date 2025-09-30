@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,7 +18,9 @@ namespace SpinnerDemo
     /// </summary>
     public partial class MainWindow : Window
     {
+        bool _frameCapture = false;
         System.Windows.Threading.DispatcherTimer? _popTimer = null;
+        System.Windows.Threading.DispatcherTimer? _captureTimer = null;
 
         public MainWindow()
         {
@@ -28,6 +31,19 @@ namespace SpinnerDemo
         {
             mainPopup.IsOpen = true;
             this.Icon = "pack://application:,,,/Assets/AppIcon.png".ReturnImageSource();
+            if (_frameCapture && _captureTimer == null)
+            {
+                _captureTimer = new System.Windows.Threading.DispatcherTimer();
+                _captureTimer.Interval = TimeSpan.FromSeconds(0.25);
+                _captureTimer.Tick += captureTimer_Tick;
+                _captureTimer.Start();
+            }
+        }
+
+        void Window_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _popTimer?.Stop();
+            _captureTimer?.Stop();
         }
 
         void Window_KeyUp(object sender, KeyEventArgs e)
@@ -70,6 +86,33 @@ namespace SpinnerDemo
             Debug.WriteLine($"[INFO] Firing popup timer event.");
             mainPopup.IsOpen = false;
             _popTimer?.Stop();
+        }
+
+        int _captureCounter = 0;
+        void captureTimer_Tick(object? sender, EventArgs e)
+        {
+            _captureCounter++;
+            SaveElementAsPng(hostBorder, $"capture_{_captureCounter:D3}.png");
+        }
+
+        void SaveElementAsPng(FrameworkElement element, string filePath)
+        {
+            if (element == null) { return; }
+            Size size = new Size(element.ActualWidth, element.ActualHeight);
+            element.Measure(size);
+            element.Arrange(new Rect(size));
+            var rtb = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(element);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(rtb));
+            try
+            {
+                using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    encoder.Save(fs);
+                }
+            }
+            catch (Exception) { }
         }
     }
 }
