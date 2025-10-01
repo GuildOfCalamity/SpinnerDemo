@@ -9,6 +9,8 @@
     <StartupObject>SpinnerDemo.App</StartupObject>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <NuGetAuditLevel>moderate</NuGetAuditLevel>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,118 +1,134 @@
 ﻿using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using System.Windows.Threading;
 
-namespace SpinnerDemo
+namespace SpinnerDemo;
+
+/// <summary>
+/// Interaction logic for MainWindow.xaml
+/// </summary>
+public partial class MainWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    bool _frameCapture = false;
+    DispatcherTimer? _popTimer = null;
+    DispatcherTimer? _captureTimer = null;
+
+    public MainWindow()
     {
-        bool _frameCapture = false;
-        System.Windows.Threading.DispatcherTimer? _popTimer = null;
-        System.Windows.Threading.DispatcherTimer? _captureTimer = null;
+        InitializeComponent();
+    }
 
-        public MainWindow()
+    void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        this.Icon = "pack://application:,,,/Assets/AppIcon.png".ReturnImageSource();
+        if (_frameCapture && _captureTimer == null)
         {
-            InitializeComponent();
+            // Remove old captures if they exist
+            var pngFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "cap*.png", SearchOption.TopDirectoryOnly);
+            foreach (var fn in pngFiles)
+            {
+                try
+                {
+                    File.Delete(fn);
+                }
+                catch { }
+            }
+            _captureTimer = new System.Windows.Threading.DispatcherTimer();
+            // We don't want to capture too fast as to bog down the app,
+            // but we also don't want a choppy framerate for the gif clip.
+            _captureTimer.Interval = TimeSpan.FromSeconds(0.3);
+            _captureTimer.Tick += captureTimer_Tick;
+            _captureTimer.Start();
         }
-
-        void Window_Loaded(object sender, RoutedEventArgs e)
+        else
         {
             mainPopup.IsOpen = true;
-            this.Icon = "pack://application:,,,/Assets/AppIcon.png".ReturnImageSource();
-            if (_frameCapture && _captureTimer == null)
-            {
-                _captureTimer = new System.Windows.Threading.DispatcherTimer();
-                _captureTimer.Interval = TimeSpan.FromSeconds(0.25);
-                _captureTimer.Tick += captureTimer_Tick;
-                _captureTimer.Start();
-            }
         }
+    }
 
-        void Window_Unloaded(object sender, RoutedEventArgs e)
+    void Window_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _popTimer?.Stop();
+        _captureTimer?.Stop();
+    }
+
+    void Window_KeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.PrintScreen)
         {
             _popTimer?.Stop();
             _captureTimer?.Stop();
+            this.Close();
         }
+    }
 
-        void Window_KeyUp(object sender, KeyEventArgs e)
+    void Border_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
         {
-            if (e.Key != Key.PrintScreen)
-                this.Close();
+            Cursor = Cursors.Hand;
+            DragMove();
         }
+        Cursor = Cursors.Arrow;
+    }
 
-        void Border_MouseDown(object sender, MouseButtonEventArgs e)
+    void mainPopup_Closed(object sender, EventArgs e)
+    {
+        Debug.WriteLine($"[INFO] Popup close event.");
+    }
+   
+
+    void mainPopup_Opened(object sender, EventArgs e)
+    {
+        if (_popTimer == null)
         {
-            if (e.ChangedButton == MouseButton.Left)
-                this.DragMove();
-
+            _popTimer = new System.Windows.Threading.DispatcherTimer();
+            _popTimer.Interval = TimeSpan.FromSeconds(4.0);
+            _popTimer.Tick += popTimer_Tick;
+            _popTimer.Start();
         }
-
-        void mainPopup_Closed(object sender, EventArgs e)
+        else
         {
-            Debug.WriteLine($"[INFO] Popup close event.");
+            if (!_popTimer.IsEnabled)
+                _popTimer?.Start();
         }
-       
+    }
 
-        void mainPopup_Opened(object sender, EventArgs e)
+    void popTimer_Tick(object? sender, EventArgs e)
+    {
+        Debug.WriteLine($"[INFO] Firing popup timer event.");
+        mainPopup.IsOpen = false;
+        _popTimer?.Stop();
+    }
+
+    int _captureCounter = 0;
+    void captureTimer_Tick(object? sender, EventArgs e)
+    {
+        _captureCounter++;
+        SaveElementAsPng(hostBorder, $"capture_{_captureCounter:D3}.png");
+    }
+
+    void SaveElementAsPng(FrameworkElement element, string filePath)
+    {
+        if (element == null) { return; }
+        Size size = new Size(element.ActualWidth, element.ActualHeight);
+        element.Measure(size);
+        //element.Arrange(new Rect(size));
+        var rtb = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(element);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        try
         {
-            if (_popTimer == null)
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
             {
-                _popTimer = new System.Windows.Threading.DispatcherTimer();
-                _popTimer.Interval = TimeSpan.FromSeconds(4.0);
-                _popTimer.Tick += popTimer_Tick;
-                _popTimer.Start();
-            }
-            else
-            {
-                if (!_popTimer.IsEnabled)
-                    _popTimer?.Start();
+                encoder.Save(fs);
             }
         }
-
-        void popTimer_Tick(object? sender, EventArgs e)
-        {
-            Debug.WriteLine($"[INFO] Firing popup timer event.");
-            mainPopup.IsOpen = false;
-            _popTimer?.Stop();
-        }
-
-        int _captureCounter = 0;
-        void captureTimer_Tick(object? sender, EventArgs e)
-        {
-            _captureCounter++;
-            SaveElementAsPng(hostBorder, $"capture_{_captureCounter:D3}.png");
-        }
-
-        void SaveElementAsPng(FrameworkElement element, string filePath)
-        {
-            if (element == null) { return; }
-            Size size = new Size(element.ActualWidth, element.ActualHeight);
-            element.Measure(size);
-            element.Arrange(new Rect(size));
-            var rtb = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(element);
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(rtb));
-            try
-            {
-                using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-                {
-                    encoder.Save(fs);
-                }
-            }
-            catch (Exception) { }
-        }
+        catch (Exception) { }
     }
 }
