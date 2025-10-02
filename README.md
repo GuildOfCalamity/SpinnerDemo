@@ -16,8 +16,6 @@
 - Most render methods have their own data elements, however some are shared, e.g. the **Snow/Wind/Space** modes all use the `_rain` arrays.
 - Many of these modes/shapes could be used as a screen saver if you desire, e.g. the `Meteor1` and `Meteor2` mode are entertaining to watch in a maximized transparency window.
 
-![Screenshot](./src/Assets/Screenshot.png)
-
 ## Spinner Control
 
 - The re-usable spiner control has many modes for rendering shapes:
@@ -26,6 +24,7 @@
 public enum SpinnerRenderShape
 {
     Dots,       // for standard/classic spinner
+    Chase,      // for spinner chase animation
     Worm,       // for wiggle worm animation
     Spiral,     // for spiral rotation animation
     Polys,      // for spinner with more complex shapes
