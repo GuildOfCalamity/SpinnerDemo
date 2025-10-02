@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using System.IO;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -27,6 +25,7 @@ public enum SpinnerRenderMode
 public enum SpinnerRenderShape
 {
     Dots,      // for standard/classic spinner
+    Chase,     // for spinner chase animation (grow & shrink)
     Worm,      // for wiggle worm animation
     Spiral,    // for spiral rotation animation
     Polys,     // for spinner with more complex shapes
@@ -244,6 +243,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnExplosionRendering;
         else if (RenderShape == SpinnerRenderShape.Fountain)
             CompositionTarget.Rendering += OnFountainRendering;
+        else if (RenderShape == SpinnerRenderShape.Chase)
+            CompositionTarget.Rendering += OnChaseRendering;
         else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -293,6 +294,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnExplosionRendering;
         else if (RenderShape == SpinnerRenderShape.Fountain)
             CompositionTarget.Rendering -= OnFountainRendering;
+        else if (RenderShape == SpinnerRenderShape.Chase)
+            CompositionTarget.Rendering -= OnChaseRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -2470,7 +2473,7 @@ public partial class Spinner : UserControl
             if (FallingUp)
             {
                 // If this star hasn't reached the top yet, move it
-                if (_twinks[i].Y > DotSize/2)
+                if (_twinks[i].Y > DotSize / 2)
                 {
                     // Apply acceleration to velocity
                     _twinks[i].Velocity += _twinks[i].Acceleration;
@@ -2480,7 +2483,7 @@ public partial class Spinner : UserControl
                         _twinks[i].Y = Math.Min(_twinks[i].Y - _twinks[i].Velocity, ActualHeight - DotSize);
                     else
                         _twinks[i].Y = Math.Min(_twinks[i].Y - _twinks[i].SpeedFactor, ActualHeight - DotSize);
-                    
+
                     allAtBottom = false; // at least one is still falling
                 }
                 else // Clamp to top
@@ -2611,7 +2614,7 @@ public partial class Spinner : UserControl
 
             // Check if dot is still inside bounds
             if (_stars[i].X >= 0 && _stars[i].X <= (ActualWidth - DotSize) &&
-                _stars[i].Y >= 0 && _stars[i].Y <= (ActualHeight- DotSize))
+                _stars[i].Y >= 0 && _stars[i].Y <= (ActualHeight - DotSize))
             {
                 allOutside = false;
             }
@@ -2649,19 +2652,20 @@ public partial class Spinner : UserControl
     public double FountainSpreadDegrees { get; set; } = 30.0;
     public double FountainFadeRate { get; set; } = 2;
     public double FountainBaseSpeed { get; set; } = 2.5;
-    public bool FountainColorTransition { get; set; } = true;
-    public bool FountainColorTransitionEaseOut { get; set; } = false;
+    public bool FountainColorTransition { get; set; } = false;
+    public bool FountainColorPaletteFire { get; set; } = false;
+    public bool FountainColorTransitionEaseOut { get; set; } = true;
     public bool FountainFromBottom { get; set; } = true;
-    public double FountainGravity { get; set; } = 18;
-    public int FountainBaseLife { get; set; } = 30; // initial life in frames (will be randomized a bit)
-    public Color FountainStartColor { get; set; } = Colors.White;
-    public Color FountainMidColor { get; set; } = Colors.Yellow;
-    public Color FountainEndColor { get; set; } = Colors.Firebrick;
-    
+    public double FountainGravity { get; set; } = 18; // px/frame^2 pulling downward
+    public int FountainBaseLife { get; set; } = 30;   // initial life in frames (will be randomized a bit)
+    public Color FountainTransitionStartColor { get; set; } = Colors.White;
+    public Color FountainTransitionMidColor { get; set; } = Colors.Yellow;
+    public Color FountainTransitionEndColor { get; set; } = Colors.Firebrick;
+
     // Fiery palette
-    public List<Color> CoreColors = new() { Colors.White, Colors.Yellow, Colors.Orange, Colors.Red };
-    public List<Color> MidColors  = new() { Colors.LightYellow, Colors.Orange, Colors.OrangeRed, Colors.DarkRed };
-    public List<Color> EdgeColors = new() { Colors.Gold, Colors.OrangeRed, Colors.DarkOrange, Colors.Black };
+    List<Color> CoreColors = new() { Colors.White, Colors.Yellow, Colors.Orange, Colors.Red };
+    List<Color> MidColors = new() { Colors.LightYellow, Colors.Orange, Colors.OrangeRed, Colors.DarkRed };
+    List<Color> EdgeColors = new() { Colors.Gold, Colors.OrangeRed, Colors.DarkOrange, Colors.Black };
 
     void CreateFountain()
     {
@@ -2698,11 +2702,15 @@ public partial class Spinner : UserControl
 
             _stars[i] = new StarState
             {
+                X = originX,
+                Y = originY,
                 Opacity = 0.9,
-                StartColor = FountainStartColor,
-                MidColor = FountainMidColor,
-                EndColor = FountainEndColor,
-                InitialBrush = DotBrush
+                StartColor = FountainTransitionStartColor,
+                MidColor = FountainTransitionMidColor,
+                EndColor = FountainTransitionEndColor,
+                InitialBrush = DotBrush,
+                Life = 0,
+                InitialLife = FountainBaseLife + Random.Shared.Next(60), // 1–2 seconds at 60fps
             };
 
             Canvas.SetLeft(dot, originX);
@@ -2712,7 +2720,7 @@ public partial class Spinner : UserControl
             ResetFountainParticle(_stars[i], originX, originY);
         }
     }
-    
+
     void ResetFountainParticle(StarState star, double originX, double originY)
     {
         // Launch spread around straight up (-π/2), e.g. ±30°
@@ -2754,14 +2762,14 @@ public partial class Spinner : UserControl
         star.InitialLife = FountainBaseLife + Random.Shared.Next(60); // 1–2 seconds at 60fps
         star.Life = 0;
         star.FadeRate = (FountainFadeRate / 100d) + Random.Shared.NextDouble() * 0.01; // vary fade slightly
-        star.StartColor = FountainStartColor;
-        star.MidColor = FountainMidColor;
-        star.EndColor = FountainEndColor;
+        // NOTE: The initial color/brush is determined by DotBrush.
+        star.StartColor = FountainTransitionStartColor;
+        star.MidColor = FountainTransitionMidColor;
+        star.EndColor = FountainTransitionEndColor;
     }
 
 
     double _spreadTime = 0;           // if using modulating spread angle
-    //double fountainGravity = 0.18;    // px/frame^2 pulling downward
     double fountainDrag = 0.995;      // mild damping for smooth arcs
     double fountainBoundsMargin = 5;  // tolerance outside screen before recycle
     void OnFountainRendering(object? sender, EventArgs e)
@@ -2799,7 +2807,7 @@ public partial class Spinner : UserControl
             // Fade: altitude-based plus soft edge fade near bounds
             double fade = _stars[i].FadeRate;
             double topFadeStart = ActualHeight * 0.25; // start fading after rising ~25% of height
-            double altitude = originY - _stars[i].Y; // how high above the origin
+            double altitude = originY - _stars[i].Y;   // how high above the origin
             if (altitude > topFadeStart)
             {
                 // Fade faster once high
@@ -2812,12 +2820,12 @@ public partial class Spinner : UserControl
             double opacityX = 1.0;
             double opacityY = 1.0;
 
-            if (_stars[i].X < marginX) 
+            if (_stars[i].X < marginX)
                 opacityX = Math.Max(0, _stars[i].X / marginX);
-            else if (_stars[i].X > ActualWidth - marginX) 
+            else if (_stars[i].X > ActualWidth - marginX)
                 opacityX = Math.Max(0, (ActualWidth - _stars[i].X) / marginX);
 
-            if (_stars[i].Y < marginY) 
+            if (_stars[i].Y < marginY)
                 opacityY = Math.Max(0, _stars[i].Y / marginY);
 
             // Combine fades
@@ -2856,14 +2864,36 @@ public partial class Spinner : UserControl
                     // Determine the brush type and LERP colors accordingly
                     if (dot.Fill is RadialGradientBrush rgb)
                     {
-                        var t1 = LerpColor(rgb.GradientStops[0].Color, _stars[i].StartColor, t);
-                        var t2 = LerpColor(rgb.GradientStops[1].Color, _stars[i].MidColor, t);
-                        var t3 = LerpColor(rgb.GradientStops[2].Color, _stars[i].EndColor, t);
-
-                        // Using a predefined palette
-                        //var t1 = UpdateGradient(CoreColors, t);
-                        //var t2 = UpdateGradient(MidColors, t);
-                        //var t3 = UpdateGradient(EdgeColors, t);
+                        //var t1 = LerpColor(rgb.GradientStops[0].Color, _stars[i].StartColor, t);
+                        //var t2 = LerpColor(rgb.GradientStops[1].Color, _stars[i].MidColor, t);
+                        //var t3 = LerpColor(rgb.GradientStops[2].Color, _stars[i].EndColor, t);
+                        var t1 = LerpColor(_stars[i].StartColor, _stars[i].StartColor, t);
+                        var t2 = LerpColor(_stars[i].MidColor, _stars[i].EndColor, t);
+                        var t3 = LerpColor(_stars[i].EndColor, _stars[i].EndColor, t);
+                        if (FountainColorPaletteFire) // Use a predefined palette
+                        {
+                            t1 = UpdateGradient(CoreColors, t);
+                            t2 = UpdateGradient(MidColors, t);
+                            t3 = UpdateGradient(EdgeColors, t);
+                        }
+                        //if (t < 0.29)
+                        //{
+                        //    t1 = LerpColor(_stars[i].StartColor, Colors.White, t);
+                        //    t2 = LerpColor(_stars[i].StartColor, Colors.Gray, t);
+                        //    t3 = LerpColor(_stars[i].StartColor, Colors.Black, t);
+                        //}
+                        //else if (t < 0.61)
+                        //{
+                        //    t1 = LerpColor(_stars[i].MidColor, Colors.White, t);
+                        //    t2 = LerpColor(_stars[i].MidColor, Colors.Gray, t);
+                        //    t3 = LerpColor(_stars[i].MidColor, Colors.Black, t);
+                        //}
+                        //else if (t < 1.01)
+                        //{
+                        //    t1 = LerpColor(_stars[i].EndColor, Colors.White, t);
+                        //    t2 = LerpColor(_stars[i].EndColor, Colors.Gray, t);
+                        //    t3 = LerpColor(_stars[i].EndColor, Colors.Black, t);
+                        //}
 
                         dot.Fill = new RadialGradientBrush
                         {
@@ -2874,23 +2904,26 @@ public partial class Spinner : UserControl
                             RadiusY = 0.5,
                             GradientStops = new GradientStopCollection
                             {
-                                new GradientStop(t1, 0.0),
-                                new GradientStop(t2, 0.4),
-                                new GradientStop(t3, 1.0),
+                                new GradientStop(t1, 0.0), // inner
+                                new GradientStop(t2, 0.36),
+                                new GradientStop(t3, 1.0), // outer
                             }
                         };
                     }
                     else if (dot.Fill is LinearGradientBrush lgb)
                     {
-                        var t1 = LerpColor(lgb.GradientStops[0].Color, _stars[i].StartColor, t);
-                        var t2 = LerpColor(lgb.GradientStops[1].Color, _stars[i].MidColor, t);
-                        var t3 = LerpColor(lgb.GradientStops[2].Color, _stars[i].EndColor, t);
-
-                        // Using a predefined palette
-                        //var t1 = UpdateGradient(CoreColors, t);
-                        //var t2 = UpdateGradient(MidColors, t);
-                        //var t3 = UpdateGradient(EdgeColors, t);
-
+                        //var t1 = LerpColor(lgb.GradientStops[0].Color, _stars[i].StartColor, t);
+                        //var t2 = LerpColor(lgb.GradientStops[1].Color, _stars[i].MidColor, t);
+                        //var t3 = LerpColor(lgb.GradientStops[2].Color, _stars[i].EndColor, t);
+                        var t1 = LerpColor(_stars[i].StartColor, _stars[i].StartColor, t);
+                        var t2 = LerpColor(_stars[i].MidColor, _stars[i].EndColor, t);
+                        var t3 = LerpColor(_stars[i].EndColor, _stars[i].EndColor, t);
+                        if (FountainColorPaletteFire) // Use a predefined palette
+                        {
+                            t1 = UpdateGradient(CoreColors, t);
+                            t2 = UpdateGradient(MidColors, t);
+                            t3 = UpdateGradient(EdgeColors, t);
+                        }
                         dot.Fill = new LinearGradientBrush
                         {
                             ColorInterpolationMode = ColorInterpolationMode.ScRgbLinearInterpolation,
@@ -2898,15 +2931,21 @@ public partial class Spinner : UserControl
                             EndPoint = new System.Windows.Point(0, 1),
                             GradientStops = new GradientStopCollection
                             {
-                                new GradientStop(t1, 0.0), // bright core
-                                new GradientStop(t2, 0.4),
-                                new GradientStop(t3, 1.0), // dark outer
+                                new GradientStop(t1, 0.0), // inner
+                                new GradientStop(t2, 0.36),
+                                new GradientStop(t3, 1.0), // outer
                             }
                         };
                     }
                     else if (dot.Fill is SolidColorBrush scb)
                     {
-                        dot.Fill = new SolidColorBrush(LerpColor(scb.Color, _stars[i].EndColor, t));
+                        //var t1 = LerpColor(scb.Color, _stars[i].EndColor, t);
+                        var t1 = LerpColor(_stars[i].StartColor, _stars[i].EndColor, t);
+                        if (FountainColorPaletteFire) // Use a predefined palette
+                        {
+                            t1 = UpdateGradient(CoreColors, t);
+                        }
+                        dot.Fill = new SolidColorBrush(t1);
                     }
                 }
                 _stars[i].Life++;
@@ -2919,7 +2958,7 @@ public partial class Spinner : UserControl
             Canvas.SetTop(dot, _stars[i].Y - DotSize / 2.0);
 
             // Recycle when done
-            bool outOfBounds = _stars[i].X < -fountainBoundsMargin || 
+            bool outOfBounds = _stars[i].X < -fountainBoundsMargin ||
                 _stars[i].X > ActualWidth + fountainBoundsMargin ||
                 _stars[i].Y > ActualHeight + fountainBoundsMargin; // fell below floor
 
@@ -2929,6 +2968,134 @@ public partial class Spinner : UserControl
             {
                 ResetFountainParticle(_stars[i], originX, originY);
             }
+        }
+    }
+
+    ChaseDot[] _dots2;
+    void CreateChase(double radius, double centerX, double centerY)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        PART_Canvas.Children.Clear();
+
+        _dots2 = new ChaseDot[DotCount];
+        for (int i = 0; i < DotCount; i++)
+        {
+            double angle = i * Tau / DotCount;
+            double x = centerX + radius * Math.Cos(angle);
+            double y = centerY + radius * Math.Sin(angle);
+
+            // Create one object for the visual element (Canvas)
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                //RenderTransformOrigin = new Point(0.5, 0.5)
+            };
+
+            // And create another object for state (calculations)
+            _dots2[i] = new ChaseDot
+            {
+                BaseSize = dot.Width,
+                Scale = 1.0,
+                Index = i
+            };
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+            PART_Canvas.Children.Add(dot);
+        }
+    }
+
+    double _inflateTime = 0;  // time accumulator for animation
+    public double ChasePulseSpeed { get; set; } = 3;  // animation speed
+    public double ChasePulseSize { get; set; } = 9;   // grow factor
+    public double ChaseRingRadius { get; set; } = 80; // ring size
+    public int ChaseMode { get; set; } = 1;           // Sin/Cos/Asin/Acos
+    public int ChaseTailLength { get; set; } = 0;     // zero ⇨ disabled (no tail)
+    public bool ChaseClockwise { get; set; } = true;
+    void OnChaseRendering(object? sender, EventArgs e)
+    {
+        if (_dots2 == null || _dots2.Length == 0)
+        {
+            CreateChase(DotSize / 2, DotSize / 2, DotSize / 2);
+            return;
+        }
+
+        _inflateTime += ChasePulseSpeed / 10.0;
+        int dotCount = _dots2.Length;
+        for (int i = 0; i < dotCount; i++)
+        {
+            var obj = _dots2[i];
+            // Compute phase offset for round-robin
+            double phase = ChaseClockwise ? (_inflateTime - i) % dotCount : (_inflateTime + i) % dotCount;
+            // Normalize to [0,1]
+            double t = (phase < 0 ? phase + dotCount : phase) / dotCount;
+
+            // Pulse strength: closer to the leader ═ stronger
+            double strength = Math.Max(0, Math.Cos(t * Math.PI * ChaseTailLength)); // Use a cosine falloff for smooth trailing
+
+            #region [Experimental]
+            //double anglePerDot = Tau / dotCount;
+            //double leaderAngle = (_inflateTime * anglePerDot) % (Tau);
+            //double dotAngle = i * anglePerDot;
+            //double delta = (dotAngle - leaderAngle + Tau) % (Tau);
+            //double normalized = delta / Tau;
+            //double tailFraction = 0.3; // 30% of circle
+            //if (normalized < tailFraction)
+            //{
+            //    double t2 = normalized / tailFraction;
+            //    strength = 1.0 - t2; // linear falloff
+            //}
+            #endregion
+
+            double pulse = 0;
+            switch (ChaseMode)
+            {
+                case 2: pulse = Math.Cos(t * Math.PI); break;
+                case 3: pulse = Math.Cos(t * Tau) + 1.0; break;
+                case 4: pulse = Math.Acos(t * Math.PI); break;
+                case 5: pulse = Math.Acosh(t * Math.PI); break;
+                case 6: pulse = Math.Asin(t * Math.PI); break;
+                case 7: pulse = Math.Asinh(t * Math.PI); break;
+                // standard mode (use sine wave pulse, EaseInOut)
+                default: pulse = Math.Sin(t * Math.PI); break;
+            }
+
+            if (ChaseTailLength > 0)
+                obj.Scale = 1.0 + strength * (ChasePulseSize / 10.0);
+            else // Scale between 1.0 and InflatePulseSize
+                obj.Scale = 1.0 + pulse * (ChasePulseSize / 10.0);
+
+            //var dot = (UIElement)PART_Canvas.Children[i];
+            var dot = (Ellipse)PART_Canvas.Children[i];
+
+            double size = obj.BaseSize * obj.Scale; // Apply scale to dot size
+            double opacity = 0.3 + strength * 0.7; // Keep faint at tail end
+
+            dot.Width = size;
+            dot.Height = size;
+            dot.Opacity = opacity;
+
+            // Because size changed, re-center the dot
+            double angle = (double)i * Tau / (double)dotCount;
+            double radius = ChaseRingRadius;
+            if (radius == 0)
+            {   // Use a percentage of the control's size
+                if (ActualHeight > ActualWidth)
+                    radius = (ActualWidth / 4);
+                else if (ActualWidth > ActualHeight)
+                    radius = (ActualHeight / 4);
+                else
+                    radius = (ActualHeight / 4);
+            }
+            double x = (ActualWidth / 2) + radius * Math.Cos(angle);
+            double y = (ActualHeight / 2) + radius * Math.Sin(angle);
+
+            Canvas.SetLeft(dot, x - size / 2.0);
+            Canvas.SetTop(dot, y - size / 2.0);
         }
     }
     #endregion
@@ -2943,7 +3110,7 @@ public partial class Spinner : UserControl
             (byte)(from.B + (to.B - from.B) * t));
     }
 
-     /// <summary>
+    /// <summary>
     /// Gamma‑corrected brighten (perceptually smoother)
     /// <code>
     ///   var brighter = BrightenGamma(baseColor, 1.5); // 50% brighter
@@ -2999,6 +3166,9 @@ public partial class Spinner : UserControl
         return Color.FromArgb(color.A, R, G, B);
     }
 
+    /// <summary>
+    /// Picks the next color in a palette based on progress [0,1].<br/>
+    /// </summary>
     static Color UpdateGradient(List<Color> palette, double progress)
     {
         int segments = palette.Count - 1;
@@ -3012,6 +3182,9 @@ public partial class Spinner : UserControl
         return LerpColor(c1, c2, localT);
     }
 
+    /// <summary>
+    /// Picks the next color in a palette based on progress [0,1].<br/>
+    /// </summary>
     void UpdateGradient(GradientStop stop, List<Color> palette, double progress)
     {
         int segments = palette.Count - 1;
@@ -3274,6 +3447,7 @@ public partial class Spinner : UserControl
     }
     #endregion
 
+    #region [Frame Capture]
     void SaveSpinnerAsPng(Canvas canvas, string filePath)
     {
         if (canvas == null) { return; }
@@ -3293,9 +3467,21 @@ public partial class Spinner : UserControl
         }
         catch (Exception) { }
     }
+    #endregion
 }
 
 #region [Support Classes]
+/// <summary>
+/// For <c>Inflate</c> mode spinner animation.
+/// </summary>
+public class ChaseDot
+{
+    //public Ellipse Dot;       // FrameworkElement
+    public double BaseSize;   // original size
+    public double Scale;      // current scale factor
+    public int Index;         // position in the circle
+}
+
 /// <summary>
 /// For new twinkle simulation.<br/>
 /// Some properties are unused in other effects.<br/>
@@ -3330,7 +3516,7 @@ class StarState
     public Color StartColor;      // initial color
     public Color MidColor;        // middle color
     public Color EndColor;        // final color
-    public Brush InitialBrush;
+    public Brush InitialBrush;    // user-defined brush
     public Ellipse[] TrailDots;   // pre-allocated trail ellipses
 }
 

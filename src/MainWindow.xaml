@@ -21,7 +21,7 @@
     mc:Ignorable="d">
     <!--
         NOTE: I've left borders around each spinner so that the visual separation
-        is obvious, you'll want to remove the border in your version.
+        is obvious, you'll want to remove the border in your final version.
     -->
     <Border
         x:Name="hostBorder"
@@ -52,6 +52,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
@@ -616,12 +617,15 @@
                 DotCount="50"
                 DotSize="8"
                 FountainBaseSpeed="2"
-                FountainColorTransition="False"
-                FountainColorTransitionEaseOut="False"
-                FountainFadeRate="2"
+                FountainColorTransition="True"
+                FountainColorTransitionEaseOut="True"
+                FountainFadeRate="1"
                 FountainFromBottom="True"
                 FountainGravity="25"
-                FountainSpreadDegrees="25"
+                FountainSpreadDegrees="30"
+                FountainTransitionEndColor="Purple"
+                FountainTransitionMidColor="DodgerBlue"
+                FountainTransitionStartColor="White"
                 RenderMode="AnimatePositions"
                 RenderShape="Fountain" />
 
@@ -640,15 +644,16 @@
                 DotCount="40"
                 DotSize="8"
                 FountainBaseSpeed="2"
+                FountainColorPaletteFire="True"
                 FountainColorTransition="True"
                 FountainColorTransitionEaseOut="True"
-                FountainEndColor="#D01010"
                 FountainFadeRate="2"
                 FountainFromBottom="False"
                 FountainGravity="1"
-                FountainMidColor="#F04010"
                 FountainSpreadDegrees="20"
-                FountainStartColor="White"
+                FountainTransitionEndColor="#D01010"
+                FountainTransitionMidColor="#F04010"
+                FountainTransitionStartColor="White"
                 RenderMode="AnimatePositions"
                 RenderShape="Fountain" />
 
@@ -692,6 +697,112 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Explode" />
 
+
+            <ctrl:Spinner
+                Grid.Row="5"
+                Grid.RowSpan="1"
+                Grid.Column="0"
+                Width="100"
+                Height="100"
+                Margin="0"
+                BorderBrush="{StaticResource SampleBorderBrush}"
+                BorderThickness="1"
+                ChaseClockwise="True"
+                ChaseMode="1"
+                ChasePulseSize="5"
+                ChasePulseSpeed="5"
+                ChaseRingRadius="0"
+                ChaseTailLength="0"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="12"
+                DotSize="6"
+                RenderMode="AnimatePositions"
+                RenderShape="Chase" />
+
+            <ctrl:Spinner
+                Grid.Row="5"
+                Grid.RowSpan="1"
+                Grid.Column="1"
+                Width="100"
+                Height="100"
+                Margin="0"
+                BorderBrush="{StaticResource SampleBorderBrush}"
+                BorderThickness="1"
+                ChaseClockwise="True"
+                ChaseMode="2"
+                ChasePulseSize="6"
+                ChasePulseSpeed="4"
+                ChaseRingRadius="0"
+                ChaseTailLength="0"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="12"
+                DotSize="6"
+                RenderMode="AnimatePositions"
+                RenderShape="Chase" />
+
+            <ctrl:Spinner
+                Grid.Row="5"
+                Grid.RowSpan="1"
+                Grid.Column="2"
+                Width="100"
+                Height="100"
+                Margin="0"
+                BorderBrush="{StaticResource SampleBorderBrush}"
+                BorderThickness="1"
+                ChaseClockwise="True"
+                ChaseMode="4"
+                ChasePulseSize="6"
+                ChasePulseSpeed="4"
+                ChaseRingRadius="0"
+                ChaseTailLength="0"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="12"
+                DotSize="6"
+                RenderMode="AnimatePositions"
+                RenderShape="Chase" />
+
+            <ctrl:Spinner
+                Grid.Row="5"
+                Grid.RowSpan="1"
+                Grid.Column="3"
+                Width="100"
+                Height="100"
+                Margin="0"
+                BorderBrush="{StaticResource SampleBorderBrush}"
+                BorderThickness="1"
+                ChaseClockwise="True"
+                ChaseMode="2"
+                ChasePulseSize="6"
+                ChasePulseSpeed="4"
+                ChaseRingRadius="0"
+                ChaseTailLength="1"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="12"
+                DotSize="6"
+                RenderMode="AnimatePositions"
+                RenderShape="Chase" />
+
+            <ctrl:Spinner
+                Grid.Row="5"
+                Grid.RowSpan="1"
+                Grid.Column="4"
+                Width="100"
+                Height="100"
+                Margin="0"
+                BorderBrush="{StaticResource SampleBorderBrush}"
+                BorderThickness="1"
+                ChaseClockwise="True"
+                ChaseMode="4"
+                ChasePulseSize="6"
+                ChasePulseSpeed="3"
+                ChaseRingRadius="0"
+                ChaseTailLength="4"
+                DotBrush="{StaticResource SnowBrushRadial}"
+                DotCount="12"
+                DotSize="6"
+                RenderMode="AnimatePositions"
+                RenderShape="Chase" />
+
             <!--#region [Popup Dialog]-->
             <Grid
                 Grid.Row="0"
@@ -731,7 +842,7 @@
                                 Grid.Column="0"
                                 Width="34"
                                 Height="34"
-                                Margin="12,0,0,0"
+                                Margin="15,0,0,0"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 RenderOptions.BitmapScalingMode="Fant"
