@@ -593,9 +593,10 @@
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
                 DotBrush="{StaticResource GeneralBrushRadial}"
-                DotCount="50"
+                DotCount="60"
                 DotSize="10"
                 FallingAcceleration="False"
+                FallingAutoReverse="False"
                 FallingBaseSpeed="2"
                 FallingFinishedPause="30"
                 FallingUp="False"
@@ -606,6 +607,29 @@
                 Grid.Row="4"
                 Grid.RowSpan="1"
                 Grid.Column="1"
+                Width="100"
+                Height="100"
+                Margin="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                BorderBrush="{StaticResource SampleBorderBrush}"
+                BorderThickness="1"
+                DotBrush="{StaticResource GeneralBrushRadial}"
+                DotCount="80"
+                DotSize="8"
+                FallingAcceleration="True"
+                FallingAutoReverse="True"
+                FallingBaseSpeed="4"
+                FallingFinishedPause="10"
+                FallingScrambleX="False"
+                FallingUp="False"
+                RenderMode="AnimatePositions"
+                RenderShape="Falling" />
+
+            <ctrl:Spinner
+                Grid.Row="4"
+                Grid.RowSpan="1"
+                Grid.Column="2"
                 Width="100"
                 Height="100"
                 Margin="0"
@@ -632,7 +656,7 @@
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
-                Grid.Column="2"
+                Grid.Column="3"
                 Width="100"
                 Height="100"
                 Margin="0"
@@ -660,7 +684,7 @@
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
-                Grid.Column="3"
+                Grid.Column="4"
                 Width="100"
                 Height="100"
                 Margin="0"
@@ -677,6 +701,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Explode" />
 
+            <!-- [expands past control borders]
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -696,6 +721,7 @@
                 ExplosionFinishedPause="30"
                 RenderMode="AnimatePositions"
                 RenderShape="Explode" />
+            -->
 
 
             <ctrl:Spinner
@@ -707,17 +733,20 @@
                 Margin="0"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                ChaseClockwise="True"
-                ChaseMode="1"
-                ChasePulseSize="5"
-                ChasePulseSpeed="5"
-                ChaseRingRadius="0"
-                ChaseTailLength="0"
                 DotBrush="{StaticResource SnowBrushRadial}"
-                DotCount="12"
-                DotSize="6"
+                DotCount="18"
+                DotSize="4"
+                RadarBeamBrush="{StaticResource RadarBrushLinear}"
+                RadarBeamWidth="8"
+                RadarBlipBrush="{StaticResource BlipBrushRadial}"
+                RadarBlipsTravel="False"
+                RadarExciteWidth="3"
+                RadarRadius="0"
+                RadarRingBlips="False"
+                RadarSweepSpeed="9"
+                RadarUseCone="True"
                 RenderMode="AnimatePositions"
-                RenderShape="Chase" />
+                RenderShape="Radar" />
 
             <ctrl:Spinner
                 Grid.Row="5"
@@ -728,17 +757,15 @@
                 Margin="0"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                ChaseClockwise="True"
-                ChaseMode="2"
-                ChasePulseSize="6"
-                ChasePulseSpeed="4"
-                ChaseRingRadius="0"
-                ChaseTailLength="0"
-                DotBrush="{StaticResource SnowBrushRadial}"
-                DotCount="12"
-                DotSize="6"
+                DotBrush="{StaticResource ProgressBrushLinear}"
+                DotCount="8"
+                DotSize="12"
+                ProgressHighlightWidth="2"
+                ProgressIndeterminate="True"
+                ProgressSpacing="11"
+                ProgressSweepSpeed="17"
                 RenderMode="AnimatePositions"
-                RenderShape="Chase" />
+                RenderShape="Progress" />
 
             <ctrl:Spinner
                 Grid.Row="5"
@@ -750,7 +777,7 @@
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
                 ChaseClockwise="True"
-                ChaseMode="4"
+                ChaseMode="2"
                 ChasePulseSize="6"
                 ChasePulseSpeed="4"
                 ChaseRingRadius="0"

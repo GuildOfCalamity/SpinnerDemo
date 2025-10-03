@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection.Metadata;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -46,6 +47,8 @@ public enum SpinnerRenderShape
     Falling,   // for drop animation
     Explode,   // for explosion animation
     Fountain,  // for fountain animation
+    Radar,     // for radar arm animation
+    Progress,  // for "progress bar" animation
 }
 
 /// <summary>
@@ -59,7 +62,9 @@ public enum SpinnerRenderShape
 ///   Most render methods have their own data elements, however some are<br/>
 ///   shared, e.g. the Snow/Wind/Space modes all use the _rain arrays.<br/>
 ///   The opacity for each dot is currently set per-frame in the render<br/>
-///   phase, but this could be moved to the creation phase if desired.
+///   phase, but this could be moved to the creation phase if desired.<br/>
+///   If you need some of the parameters to update real-time, e.g. <see cref="Spinner.ProgressValue"/>,<br/>
+///   then is may be conducive to convert it into a dependency property.<br/>
 /// </remarks>
 public partial class Spinner : UserControl
 {
@@ -245,6 +250,10 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnFountainRendering;
         else if (RenderShape == SpinnerRenderShape.Chase)
             CompositionTarget.Rendering += OnChaseRendering;
+        else if (RenderShape == SpinnerRenderShape.Radar)
+            CompositionTarget.Rendering += OnRadarRendering;
+        else if (RenderShape == SpinnerRenderShape.Progress)
+            CompositionTarget.Rendering += OnProgressRendering;
         else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -296,6 +305,10 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnFountainRendering;
         else if (RenderShape == SpinnerRenderShape.Chase)
             CompositionTarget.Rendering -= OnChaseRendering;
+        else if (RenderShape == SpinnerRenderShape.Radar)
+            CompositionTarget.Rendering -= OnRadarRendering;
+        else if (RenderShape == SpinnerRenderShape.Progress)
+            CompositionTarget.Rendering -= OnProgressRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -1924,7 +1937,7 @@ public partial class Spinner : UserControl
         }
     }
 
-    double lastFadePercent = 0.2; // start fading when life is below this percentage (20% by default)
+    double _lastFadePercent = 0.2; // start fading when life is below this percentage (20% by default)
     public int MeteorTrailLength { get; set; } = 16;
     public Color MeteorTrailColor { get; set; } = Colors.LightGray;
     public double MeteorTrailFactor { get; set; } = 2; // size reduction factor for trail dots
@@ -1966,13 +1979,13 @@ public partial class Spinner : UserControl
 
                 // Adjust opacity (fade out as life decreases)
                 double lifeRatio = (double)star.Life / star.InitialLife;
-                if (lifeRatio > lastFadePercent)
+                if (lifeRatio > _lastFadePercent)
                 {
                     dot.Opacity = 1.0; // full brightness
                 }
                 else
                 {
-                    double t = lifeRatio / lastFadePercent; // normalize last 20%
+                    double t = lifeRatio / _lastFadePercent; // normalize last 20%
                     dot.Opacity = t * t; // quadratic fade
                 }
 
@@ -1987,7 +2000,7 @@ public partial class Spinner : UserControl
                     // fade along trail
                     //td.Opacity = 0.8 * (1 - t);
                     // fade along life span
-                    double fade = (lifeRatio > lastFadePercent ? 1.0 : (lifeRatio / lastFadePercent) * (lifeRatio / lastFadePercent));
+                    double fade = (lifeRatio > _lastFadePercent ? 1.0 : (lifeRatio / _lastFadePercent) * (lifeRatio / _lastFadePercent));
                     td.Opacity = (1 - t) * 0.8 * fade;
 
                     double tTrail = (double)j / star.TrailDots.Length;
@@ -2152,13 +2165,13 @@ public partial class Spinner : UserControl
 
                 // Adjust opacity (fade out as life decreases)
                 double lifeRatio = (double)star.Life / star.InitialLife;
-                if (lifeRatio > lastFadePercent)
+                if (lifeRatio > _lastFadePercent)
                 {
                     dot.Opacity = 1.0; // full brightness
                 }
                 else
                 {
-                    double t = lifeRatio / lastFadePercent; // normalize last 20%
+                    double t = lifeRatio / _lastFadePercent; // normalize last 20%
                     dot.Opacity = t * t; // quadratic fade
                 }
 
@@ -2201,7 +2214,7 @@ public partial class Spinner : UserControl
                     // fade along trail
                     //td.Opacity = 0.8 * (1 - t);
                     // fade along life span
-                    double fade = (lifeRatio > lastFadePercent ? 1.0 : (lifeRatio / lastFadePercent) * (lifeRatio / lastFadePercent));
+                    double fade = (lifeRatio > _lastFadePercent ? 1.0 : (lifeRatio / _lastFadePercent) * (lifeRatio / _lastFadePercent));
                     td.Opacity = (1 - t) * 0.8 * fade;
 
                     double tTrail = (double)j / star.TrailDots.Length;
@@ -2412,6 +2425,8 @@ public partial class Spinner : UserControl
     public double FallingBaseSpeed { get; set; } = 4;
     public bool FallingAcceleration { get; set; } = false;
     public bool FallingUp { get; set; } = false;
+    public bool FallingAutoReverse { get; set; } = false;
+    public bool FallingScrambleX { get; set; } = true;  // re-mix X position when resetting
     public int FallingFinishedPause { get; set; } = 90; // frames to pause when all dots reach bottom
 
     void CreateFalling()
@@ -2425,8 +2440,8 @@ public partial class Spinner : UserControl
         _twinks = new Star[DotCount];
         for (int i = 0; i < DotCount; i++)
         {
-            double x = Random.Shared.NextDouble() * (ActualWidth - (DotSize / 2));
-            double y = FallingUp ? ActualHeight - (Random.Shared.NextDouble() * DotSize) : Random.Shared.NextDouble() * DotSize;
+            double x = Random.Shared.NextDouble() * (ActualWidth - (DotSize / 2.0));
+            double y = FallingUp ? ActualHeight - (Random.Shared.NextDouble() * DotSize) : 0;
 
             Ellipse dot = new Ellipse
             {
@@ -2436,7 +2451,7 @@ public partial class Spinner : UserControl
                 Opacity = (double)i / (double)DotCount + 0.01 // fade each consecutive dot
             };
 
-            var baseAccel = ((FallingBaseSpeed * 2.5) / 100);
+            var baseAccel = ((FallingBaseSpeed * 2.5) / 100.0);
             var ts = new Star
             {
                 X = x,
@@ -2466,7 +2481,6 @@ public partial class Spinner : UserControl
         }
 
         bool allAtBottom = true;
-
 
         for (int i = 0; i < _dots.Length; i++)
         {
@@ -2513,8 +2527,12 @@ public partial class Spinner : UserControl
                 }
             }
 
+            if (_twinks[i].X < 0)
+                Debugger.Break(); // sanity check
+
             var dot = (UIElement)PART_Canvas.Children[i];
-            Canvas.SetLeft(dot, _twinks[i].X - DotSize / 2);
+            var adjustedX = _twinks[i].X - (DotSize / 2.0); // don't overstep the right side boundary
+            Canvas.SetLeft(dot, adjustedX);
             Canvas.SetTop(dot, _twinks[i].Y);
         }
 
@@ -2524,11 +2542,15 @@ public partial class Spinner : UserControl
             // Increment and check counter
             if (++_pauseCounter >= FallingFinishedPause)
             {
+                if (FallingAutoReverse)
+                    FallingUp = !FallingUp; // auto-reverse direction
+
                 // Reset all dots together
                 foreach (var twink in _twinks)
                 {
-                    twink.Y = FallingUp ? ActualHeight - (Random.Shared.NextDouble() * DotSize) : Random.Shared.NextDouble() * DotSize;
-                    twink.X = Random.Shared.NextDouble() * (ActualWidth - (DotSize / 2)); // randomize X
+                    twink.Y = FallingUp ? ActualHeight - (Random.Shared.NextDouble() * DotSize) : 0;
+                    if (FallingScrambleX)
+                        twink.X = Random.Shared.NextDouble() * (ActualWidth - (DotSize / 2.0)); // randomize X on next turn
                     twink.Velocity = 0; // reset velocity
                 }
                 _pauseCounter = 0; // reset pause
@@ -2629,8 +2651,7 @@ public partial class Spinner : UserControl
         {
             if (++_pauseCounter >= ExplosionFinishedPause)
             {
-                // Instead of recreating the arrays, we'll just reset them in place.
-                //CreateExplosion();
+                // Instead of recreating arrays, just reset them in place.
                 foreach (var star in _stars)
                 {
                     star.Y = ActualHeight / 2;
@@ -3020,8 +3041,19 @@ public partial class Spinner : UserControl
     {
         if (_dots2 == null || _dots2.Length == 0)
         {
-            CreateChase(DotSize / 2, DotSize / 2, DotSize / 2);
+            CreateChase(DotSize / 2, ActualWidth / 2, ActualHeight / 2);
             return;
+        }
+        
+        double radius = ChaseRingRadius;
+        if (radius == 0)
+        {   // Use a percentage of the control's size
+            if (ActualHeight > ActualWidth)
+                radius = (ActualWidth / 4);
+            else if (ActualWidth > ActualHeight)
+                radius = (ActualHeight / 4);
+            else
+                radius = (ActualHeight / 4);
         }
 
         _inflateTime += ChasePulseSpeed / 10.0;
@@ -3081,16 +3113,6 @@ public partial class Spinner : UserControl
 
             // Because size changed, re-center the dot
             double angle = (double)i * Tau / (double)dotCount;
-            double radius = ChaseRingRadius;
-            if (radius == 0)
-            {   // Use a percentage of the control's size
-                if (ActualHeight > ActualWidth)
-                    radius = (ActualWidth / 4);
-                else if (ActualWidth > ActualHeight)
-                    radius = (ActualHeight / 4);
-                else
-                    radius = (ActualHeight / 4);
-            }
             double x = (ActualWidth / 2) + radius * Math.Cos(angle);
             double y = (ActualHeight / 2) + radius * Math.Sin(angle);
 
@@ -3098,6 +3120,567 @@ public partial class Spinner : UserControl
             Canvas.SetTop(dot, y - size / 2.0);
         }
     }
+
+
+    double _sweepAngle = 0.0;                         // in radians
+    const double _decay = 0.75;                       // multiplicative decay each frame
+    List<RadarBlip> _blips = new List<RadarBlip>();   // radar contacts (blips)
+    public double RadarExciteWidth { get; set; } = 2; // (0.2 ⇨ radians) angular width of excitation band
+    public double RadarSweepSpeed { get; set; } = 6;  // 0.06 ⇨ radians per frame
+    public bool RadarClockwise { get; set; } = true;
+    public bool RadarUseCone { get; set; } = true;
+    public bool RadarRingBlips { get; set; } = false;
+    public bool RadarBlipsTravel { get; set; } = false;
+    public double RadarBeamWidth { get; set; } = 6;  // 0.6 ⇨ radians
+    public double RadarRadius { get; set; } = 80;    // ring size (zero ⇨ auto calculate)
+    public Brush RadarBeamBrush { get; set; } = new SolidColorBrush(Color.FromRgb(30, 255, 120)); // green
+    public Brush RadarBlipBrush { get; set; } = new SolidColorBrush(Color.FromRgb(30, 255, 120)); // green
+
+    void TrySpawnMovingBlip(double centerX, double centerY, double radius)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        if (Random.Shared.NextDouble() <= 0.02) // ~2% chance per frame
+        {
+            // Pick polar coordinate inside circle (radius * 0.7 ⇨ keep inside outer edge)
+            double r = (radius * 0.7) * Math.Sqrt(Random.Shared.NextDouble());
+
+            // Random position inside circle
+            //double angle = Random.Shared.NextDouble() * Tau;
+
+            // Cone-adjacent blip placement
+            double spread = 0.15; // radians (~9° cone around sweep)
+            double angle = _sweepAngle + ((Random.Shared.NextDouble() - 0.5) * 2 * spread);
+
+            double x = centerX + r * Math.Cos(angle);
+            double y = centerY + r * Math.Sin(angle);
+
+            // Small random drift velocity
+            double vx = (Random.Shared.NextDouble() - 0.5) * 0.5;
+            double vy = (Random.Shared.NextDouble() - 0.5) * 0.5;
+
+            var dot = new Ellipse
+            {
+                Width = DotSize * 1.2,
+                Height = DotSize * 1.2,
+                Fill = RadarBlipBrush,
+                Opacity = 0.0
+            };
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+            PART_Canvas.Children.Add(dot);
+
+            _blips.Add(new RadarBlip
+            {
+                Dot = dot,
+                X = x, Y = y,
+                VX = vx, VY = vy,
+                Lifetime = 100 + Random.Shared.Next(100), // 2-5 seconds
+                Age = 0
+            });
+        }
+    }
+
+    void UpdateMovingBlips(double centerX, double centerY, double radius)
+    {
+        if (PART_Canvas == null || _blips == null || _blips.Count == 0)
+            return;
+
+        for (int i = _blips.Count - 1; i >= 0; i--)
+        {
+            var blip = _blips[i];
+            blip.Age++;
+
+            // Move
+            blip.X += blip.VX;
+            blip.Y += blip.VY;
+
+            // Keep inside radar circle
+            double dx = blip.X - centerX;
+            double dy = blip.Y - centerY;
+            double dist = Math.Sqrt(dx * dx + dy * dy);
+            
+            // Bounce back inward
+            //if (dist > radius)
+            //{
+            //    double factor = radius / dist;
+            //    blip.X = centerX + dx * factor;
+            //    blip.Y = centerY + dy * factor;
+            //    blip.VX *= -0.5; blip.VY *= -0.5;
+            //}
+
+            // How close to the border (0 = center, 1 = edge)
+            double normalized = dist / radius;
+
+            // Fade factor: full visible until 80% of radius, then fade to 0 at edge
+            double borderFade = 1.0;
+            if (normalized > 0.8)
+            {
+                double tf = (normalized - 0.8) / 0.2; // 0 at 80%, 1 at 100%
+                borderFade = 1.0 - Math.Min(1.0, tf);
+            }
+
+            // Fade in/out based on age
+            double t = blip.Age / blip.Lifetime;
+            double opacity = (t < 0.1) ? t * 10 : (t > 0.9 ? (1 - t) * 10 : 1.0);
+            //blip.Dot.Opacity = opacity;
+            blip.Dot.Opacity = opacity * borderFade;
+
+            // Position
+            Canvas.SetLeft(blip.Dot, blip.X - blip.Dot.Width / 2);
+            Canvas.SetTop(blip.Dot, blip.Y - blip.Dot.Height / 2);
+
+            // Remove if expired
+            if (blip.Age >= blip.Lifetime)
+            {
+                PART_Canvas.Children.Remove(blip.Dot);
+                _blips.RemoveAt(i);
+            }
+        }
+    }
+
+    void TrySpawnStaticBlip(double centerX, double centerY, double radius)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        if (Random.Shared.NextDouble() <= 0.02) // ~2% chance per frame
+        {
+            // Pick polar coordinate inside circle (radius * 0.75 ⇨ keep inside outer edge)
+            double r = (radius * 0.75) * Math.Sqrt(Random.Shared.NextDouble()); // sqrt for uniform distribution
+
+            // Random blip placement
+            //double angle = Random.Shared.NextDouble() * Tau;
+            
+            // Cone-adjacent blip placement
+            double spread = 0.15; // radians (~9° cone around sweep)
+            double angle = _sweepAngle + ((Random.Shared.NextDouble() - 0.5) * 2 * spread);
+
+            double x = centerX + r * Math.Cos(angle);
+            double y = centerY + r * Math.Sin(angle);
+
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = RadarBlipBrush,
+                Opacity = 0.8
+            };
+
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+            PART_Canvas.Children.Add(dot);
+
+            _blips.Add(new RadarBlip
+            {
+                Dot = dot,
+                X = x,
+                Y = y,
+                Lifetime = 30 + Random.Shared.Next(60), // 1–2 seconds (frame based)
+                Age = 0
+            });
+        }
+    }
+
+    void UpdateStaticBlips()
+    {
+        if (PART_Canvas == null || _blips == null || _blips.Count == 0)
+            return;
+
+        for (int i = _blips.Count - 1; i >= 0; i--)
+        {
+            var blip = _blips[i];
+            blip.Age++; // age each blip per frame
+            double t = blip.Age / blip.Lifetime;
+            blip.Dot.Opacity = 1.0 - t; // fade out with age
+            double size = (DotSize * 1.5) * (1.0 - 0.5 * t); // shrink as it fades
+            blip.Dot.Width = size;
+            blip.Dot.Height = size;
+            Canvas.SetLeft(blip.Dot, blip.X - size / 2);
+            Canvas.SetTop(blip.Dot, blip.Y - size / 2);
+            if (blip.Age >= blip.Lifetime)
+            {
+                PART_Canvas.Children.Remove(blip.Dot);
+                _blips.RemoveAt(i);
+            }
+        }
+    }
+
+    void CreateRadar(double radius, double centerX, double centerY)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        PART_Canvas.Children.Clear();
+
+        _dots2 = new ChaseDot[DotCount];
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            double angle = i * (Tau / DotCount);
+
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                Opacity = 0.8
+            };
+
+            double x = centerX + radius * Math.Cos(angle);
+            double y = centerY + radius * Math.Sin(angle);
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, y - dot.Height / 2);
+            PART_Canvas.Children.Add(dot);
+
+            _dots2[i] = new ChaseDot
+            {
+                Angle = angle,
+                BaseSize = dot.Width,
+                Intensity = 0.0
+            };
+        }
+    }
+
+    void OnRadarRendering(object? sender, EventArgs e)
+    {
+        if (_dots2 == null || _dots2.Length == 0)
+        {
+            CreateRadar(DotSize / 2, ActualWidth / 2, ActualHeight / 2);
+            return;
+        }
+
+        // Advance sweep angle
+        double dir = RadarClockwise ? -1.0 : 1.0;
+        _sweepAngle = (_sweepAngle + dir * (RadarSweepSpeed/100)) % Tau;
+        if (_sweepAngle < 0) 
+            _sweepAngle += Tau;
+
+        double radius = RadarRadius;
+        if (radius == 0)
+        {   // Use a percentage of the control's size
+            if (ActualHeight > ActualWidth)
+                radius = (ActualWidth / 4);
+            else if (ActualWidth > ActualHeight)
+                radius = (ActualHeight / 4);
+            else
+                radius = (ActualHeight / 4);
+        }
+
+        // Iterate through element visuals
+        for (int i = 0; i < _dots2.Length; i++)
+        {
+            var obj = _dots2[i];
+
+            // Angular distance from sweep
+            double delta = Math.Abs(WrapAngle(obj.Angle - _sweepAngle));
+
+            // Excitation: strong near the arm, falls off by angle
+            double excite = 0.0;
+            if (delta <= (RadarExciteWidth/10d))
+            {
+                double t = delta / (RadarExciteWidth/10d);    // 0 at arm, 1 at edge
+                excite = 1.0 - t;                  // linear falloff
+                // Optional: use a sharper curve
+                // excite = 1.0 - t * t;           // quadratic
+                // excite = Math.Exp(-3.0 * t);    // exponential
+            }
+
+            // Apply decay, then add excitation
+            obj.Intensity = obj.Intensity * _decay + excite * (1.0 - _decay);
+
+            double scale = 0;
+            double opacity = 0;
+            if (RadarRingBlips)
+            {
+                // For blip effect, combine intensity with blip intensity
+                double combined = Math.Max(obj.Intensity, obj.BlipIntensity);
+                // Map intensity to visuals
+                scale = 1.2 + combined * 0.9;    // size boost
+                opacity = 0.5 + combined * 0.9;  // glow boost
+            }
+            else
+            {
+                // Map intensity to visuals
+                scale = 1.2 + obj.Intensity * 0.9;    // size boost
+                opacity = 0.5 + obj.Intensity * 0.9;  // glow boost
+            }
+            double size = obj.BaseSize * scale;
+
+            //var dot = (UIElement)PART_Canvas.Children[i];
+            // More versatile if working with color/brush modification
+            var dot = (Ellipse)PART_Canvas.Children[i];
+
+            dot.Width = size;
+            dot.Height = size;
+            dot.Opacity = opacity;
+
+            // tail/dim ⇨ lead/bright
+            //Color clr = LerpColor(Color.FromRgb(0, 60, 0), Color.FromRgb(30, 255, 120), obj.Intensity);
+            //var brush = dot.Fill as SolidColorBrush;
+            //if (brush != null) { brush.Color = clr; }
+
+            if (RadarRingBlips)
+            {
+                if (Random.Shared.NextDouble() < 0.002) // ~0.2% chance per frame
+                    obj.BlipIntensity = 1.0; // full flare
+
+                // Decay blip over time
+                obj.BlipIntensity *= 0.91;
+            }
+
+            // Keep centered (size changes)
+            double x = (ActualWidth / 2) + radius * Math.Cos(obj.Angle);
+            double y = (ActualHeight / 2) + radius * Math.Sin(obj.Angle);
+            Canvas.SetLeft(dot, x - size / 2);
+            Canvas.SetTop(dot, y - size / 2);
+        }
+
+        // Draw the sweep arm
+        DrawSweepArm(ActualWidth / 2, ActualHeight / 2, radius, _sweepAngle);
+
+        // Possible blip spawn inside radar diameter
+        if (!RadarRingBlips)
+        {
+            if (RadarBlipsTravel)
+            {
+                TrySpawnMovingBlip(ActualWidth / 2, ActualHeight / 2, radius);
+                UpdateMovingBlips(ActualWidth / 2, ActualHeight / 2, radius);
+            }
+            else
+            {
+                TrySpawnStaticBlip(ActualWidth / 2, ActualHeight / 2, radius);
+                UpdateStaticBlips();
+            }
+        }
+    }
+
+    void DrawSweepArm(double centerX, double centerY, double radius, double angle)
+    {
+        if (RadarUseCone)
+        {
+            if (_armBeam == null)
+                CreateSweepBeam(centerX, centerY, radius);
+
+            UpdateSweepBeam(centerX, centerY, radius, angle);
+        }
+        else
+        {
+            if (_armLine == null)
+                CreateSweepArm(centerX, centerY, radius);
+
+            double x2 = centerX + radius * Math.Cos(angle);
+            double y2 = centerY + radius * Math.Sin(angle);
+            _armLine.X1 = centerX; _armLine.X2 = x2;
+            _armLine.Y1 = centerY; _armLine.Y2 = y2;
+        }
+    }
+
+    Line _armLine;
+    void CreateSweepArm(double centerX, double centerY, double radius)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        _armLine = new Line
+        {
+            Stroke = RadarBeamBrush,
+            Opacity = 0.8,
+            StrokeThickness = DotSize,
+            StrokeLineJoin = PenLineJoin.Round,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+        };
+        PART_Canvas.Children.Remove(_armLine);
+        PART_Canvas.Children.Add(_armLine);
+        UpdateSweepArm(centerX, centerY, radius, 0);
+    }
+
+    void UpdateSweepArm(double centerX, double centerY, double radius, double angle)
+    {
+        if (_armLine == null)
+            return;
+
+        double x2 = centerX + radius * Math.Cos(angle);
+        double y2 = centerY + radius * Math.Sin(angle);
+        _armLine.X1 = centerX; _armLine.X2 = x2;
+        _armLine.Y1 = centerY; _armLine.Y2 = y2;
+    }
+
+    System.Windows.Shapes.Path _armBeam;
+    void CreateSweepBeam(double centerX, double centerY, double radius)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        _armBeam = new System.Windows.Shapes.Path
+        {
+            Fill = RadarBeamBrush,
+            StrokeThickness = 0,
+            Stroke = DotBrush,
+            Opacity = 0.8,
+            IsHitTestVisible = false
+        };
+        PART_Canvas.Children.Remove(_armBeam);
+        PART_Canvas.Children.Add(_armBeam);
+        UpdateSweepBeam(centerX, centerY, radius, 0.0);
+    }
+
+    void UpdateSweepBeam(double cx, double cy, double r, double angle)
+    {
+        if (_armBeam == null) 
+            return;
+
+        double a1 = angle - (RadarBeamWidth / 10d) * 0.5;
+        double a2 = angle + (RadarBeamWidth / 10d) * 0.5;
+
+        // Create a pie-slice geometry
+        Point p1 = new Point(cx + r * Math.Cos(a1), cy + r * Math.Sin(a1));
+        Point p2 = new Point(cx + r * Math.Cos(a2), cy + r * Math.Sin(a2));
+        var fig = new PathFigure { StartPoint = new Point(cx, cy), IsClosed = true };
+        fig.Segments.Add(new LineSegment(p1, true));
+        fig.Segments.Add(new ArcSegment(p2, new Size(r, r), 0, false, SweepDirection.Clockwise, true));
+        fig.Segments.Add(new LineSegment(new Point(cx, cy), true));
+
+        _armBeam.Data = new PathGeometry(new[] { fig });
+    }
+
+
+    bool _progressEaseEdge = true;
+    double _progressMinOpacity = 0.2;
+    double _sweepTime = 0.0;
+    public int ProgressValue { get; set; } = 0;
+    public double ProgressSpacing { get; set; } = 10;
+    public double ProgressSweepSpeed { get; set; } = 16;    // controls how fast the highlight moves
+    public double ProgressHighlightWidth { get; set; } = 3; // how many dots wide the highlight is
+    public bool ProgressIndeterminate { get; set; } = false; // if false, uses _progress value (0..100)
+
+    ProgressDot[] _dots3;
+    void CreateProgressDots(double spacing)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        PART_Canvas.Children.Clear();
+
+        _dots3 = new ProgressDot[DotCount];
+
+        // total width of all dots + spacing between them
+        double totalWidth = (DotCount - 1) * spacing;
+
+        // left-most starting X so the row is centered
+        double startX = (ActualWidth / 2.0) - totalWidth / 2.0;
+        double startY = ActualHeight / 2.0;
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                Opacity = _progressMinOpacity
+            };
+
+            double x = startX + i * spacing;
+            Canvas.SetLeft(dot, x - dot.Width / 2);
+            Canvas.SetTop(dot, startY - dot.Height / 2);
+            PART_Canvas.Children.Add(dot);
+
+            _dots3[i] = new ProgressDot
+            {
+                X = x - dot.Width / 2,
+                Y = startY - dot.Height / 2,
+                Dot = dot,
+                BaseSize = dot.Width,
+                Index = i
+            };
+        }
+    }
+
+    void OnProgressRendering(object? sender, EventArgs e)
+    {
+        if (_dots3 == null || _dots3.Length == 0)
+        {
+            CreateProgressDots(ProgressSpacing);
+            return;
+        }
+
+        _sweepTime += (ProgressSweepSpeed / 100.0);
+
+        // Position of the highlight center (wraps around)
+        double highlightCenter = (_sweepTime % _dots3.Length);
+
+        #region [Classic fill mode]
+        if (ProgressValue > 100)
+            ProgressValue = 0;
+        // Normalize: if progress > 1, assume percent (0..100)
+        double p = (double)ProgressValue > 1.0 ? (double)ProgressValue / 100.0 : (double)ProgressValue;
+        // Clamp to [0,1]
+        p = Math.Min(1.0, Math.Max(0.0, p));
+        // Map to dot index domain
+        double scaled = p * DotCount;
+        // Fully filled dots count and fractional fill on the next dot
+        int filledCount = (int)Math.Floor(scaled);
+        double frac = scaled - filledCount; // 0..1
+        #endregion
+
+        for (int i = 0; i < _dots3.Length; i++)
+        {
+            var pd = _dots3[i];
+
+            if (ProgressIndeterminate)
+            {
+                // Distance from highlight center
+                double dist = Math.Abs(i - highlightCenter);
+                // Wrap around edges
+                if (dist > _dots3.Length / 2.0)
+                    dist = _dots3.Length - dist;
+                // Strength is one at center, fades with distance
+                double strength = Math.Max(0, 1.0 - dist / ProgressHighlightWidth);
+                // Map to opacity
+                pd.Dot.Opacity = 0.2 + strength * 0.9;
+            }
+            else // classic fill mode
+            {
+                if (p <= 0.0)
+                {   // All baseline at start
+                    pd.Dot.Opacity = _progressMinOpacity;
+                }
+                else if (p >= 1.0)
+                {   // All full at completion
+                    pd.Dot.Opacity = 1.0;
+                }
+                else if (i < filledCount)
+                {   // Fully filled dots to the left of the edge
+                    pd.Dot.Opacity = 1.0;
+                }
+                else if (i == filledCount)
+                {   // Edge dot: partial fill
+                    double t = frac;
+                    // Optional easing for a smoother ramp
+                    if (_progressEaseEdge)
+                    {   // Smoothstep: t^2 * (3 - 2t)
+                        t = t * t * (3.0 - 2.0 * t);
+                    }
+                    pd.Dot.Opacity = _progressMinOpacity + t * (1.0 - _progressMinOpacity);
+                }
+                else
+                {   // Remaining dots: baseline
+                    pd.Dot.Opacity = _progressMinOpacity;
+                }
+            }
+    
+            //var dot = (UIElement)PART_Canvas.Children[i];
+            var dot = (Ellipse)PART_Canvas.Children[i];
+            dot.Opacity = pd.Dot.Opacity;
+            Canvas.SetLeft(dot, pd.X);
+            Canvas.SetTop(dot, pd.Y);
+        }
+    }
+
     #endregion
 
     #region [Color Helpers]
@@ -3235,6 +3818,18 @@ public partial class Spinner : UserControl
             GradientStops = gsc
         };
         return lgb;
+    }
+    #endregion
+
+    #region [Angle Helpers]
+    /// <summary>
+    /// Wrap to [-π, π]
+    /// </summary>
+    static double WrapAngle(double ang)
+    {
+        ang = (ang + Math.PI) % Tau;
+        if (ang < 0) { ang += Tau; }
+        return ang - Math.PI;
     }
     #endregion
 
@@ -3471,15 +4066,38 @@ public partial class Spinner : UserControl
 }
 
 #region [Support Classes]
+public class ProgressDot
+{
+    public Ellipse Dot;
+    public double X, Y;
+    public double BaseSize;
+    public int Index;
+}
+
 /// <summary>
 /// For <c>Inflate</c> mode spinner animation.
 /// </summary>
 public class ChaseDot
 {
-    //public Ellipse Dot;       // FrameworkElement
-    public double BaseSize;   // original size
-    public double Scale;      // current scale factor
-    public int Index;         // position in the circle
+    //public Ellipse Dot;        // FrameworkElement
+    public double BaseSize;      // original size
+    public double Scale;         // current scale factor
+    public int Index;            // position in the circle
+    public double Angle;         // radians: 0..2π
+    public double Intensity;     // 0-1 current glow
+    public double BlipIntensity; // random detection blip
+}
+
+/// <summary>
+/// For <c>Radar</c> mode spinner animations.
+/// </summary>
+public class RadarBlip
+{
+    public Ellipse Dot;
+    public double X, Y;
+    public double VX, VY;     // velocity (for moving blips)
+    public double Lifetime;   // total frames
+    public double Age;        // current age
 }
 
 /// <summary>

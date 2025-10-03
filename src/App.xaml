@@ -66,7 +66,7 @@
                 <RadialGradientBrush.GradientStops>
                     <GradientStop Offset="0.0" Color="White" />
                     <GradientStop Offset="0.5" Color="DodgerBlue" />
-                    <GradientStop Offset="1.0" Color="Black" />
+                    <GradientStop Offset="1.0" Color="Navy" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
             <RadialGradientBrush x:Key="SnowBrushRadial" GradientOrigin="0.75,0.25">
@@ -90,6 +90,13 @@
                     <GradientStop Offset="0.6" Color="SpringGreen" />
                     <GradientStop Offset="0.8" Color="DodgerBlue" />
                     <GradientStop Offset="1.0" Color="#202020" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <RadialGradientBrush x:Key="BlipBrushRadial" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.5" Color="SpringGreen" />
+                    <GradientStop Offset="1.0" Color="#181818" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
             <RadialGradientBrush x:Key="FountainBrushRadial" GradientOrigin="0.75,0.25">
@@ -126,13 +133,22 @@
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>
+            <LinearGradientBrush x:Key="RadarBrushLinear" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#87FFB5" />
+                        <GradientStop Offset="0.5" Color="#1EFF78" />
+                        <GradientStop Offset="0.8" Color="#129647" />
+                        <GradientStop Offset="1.0" Color="#084420" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
             <LinearGradientBrush x:Key="ProgressBrushLinear" StartPoint="0,0" EndPoint="0,1">
                 <GradientBrush.GradientStops>
                     <GradientStopCollection>
                         <GradientStop Offset="0.0" Color="#F5F5F5" />
                         <GradientStop Offset="0.5" Color="DodgerBlue" />
-                        <GradientStop Offset="0.8" Color="#202020" />
-                        <GradientStop Offset="1.0" Color="Black" />
+                        <GradientStop Offset="1.0" Color="Navy" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>

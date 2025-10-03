@@ -13,7 +13,7 @@ namespace SpinnerDemo;
 /// </summary>
 public partial class MainWindow : Window
 {
-    bool _frameCapture = false;
+    bool _frameCapture = true;
     DispatcherTimer? _popTimer = null;
     DispatcherTimer? _captureTimer = null;
 
@@ -22,6 +22,7 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
+    #region [Events]
     void Window_Loaded(object sender, RoutedEventArgs e)
     {
         this.Icon = "pack://application:,,,/Assets/AppIcon.png".ReturnImageSource();
@@ -40,7 +41,7 @@ public partial class MainWindow : Window
             _captureTimer = new System.Windows.Threading.DispatcherTimer();
             // We don't want to capture too fast as to bog down the app,
             // but we also don't want a choppy framerate for the gif clip.
-            _captureTimer.Interval = TimeSpan.FromSeconds(0.3);
+            _captureTimer.Interval = TimeSpan.FromSeconds(0.2);
             _captureTimer.Tick += captureTimer_Tick;
             _captureTimer.Start();
         }
@@ -131,4 +132,5 @@ public partial class MainWindow : Window
         }
         catch (Exception) { }
     }
+    #endregion
 }
