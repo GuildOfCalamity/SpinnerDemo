@@ -45,6 +45,7 @@ public enum SpinnerRenderShape
     Falling,    // for drop animation
     Explode,    // for explosion animation
     Fountain,   // for fountain animation
+    Progress,   // for progress bar animation
 }
 ```
 
