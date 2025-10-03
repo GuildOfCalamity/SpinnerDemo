@@ -13,7 +13,7 @@ namespace SpinnerDemo;
 /// </summary>
 public partial class MainWindow : Window
 {
-    bool _frameCapture = true;
+    bool _frameCapture = false;
     DispatcherTimer? _popTimer = null;
     DispatcherTimer? _captureTimer = null;
 
