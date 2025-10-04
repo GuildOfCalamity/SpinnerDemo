@@ -339,7 +339,7 @@ public partial class Spinner : UserControl
         PART_Canvas.Children.Clear();
         double radius = Math.Min(ActualWidth, ActualHeight) / 2 - DotSize;
 
-        // Fetch a brush from the local UserControl
+        // If you wanted to fetch a brush from the local UserControl:
         //Brush? brsh = (Brush)FindResource("DotBrush");
 
         for (int i = 0; i < DotCount; i++)
@@ -371,7 +371,10 @@ public partial class Spinner : UserControl
     /// <summary>
     /// Create path geometry instead of a standard <see cref="Ellipse"/>.
     /// </summary>
-    /// <param name="pointOutward"></param>
+    /// <param name="pointOutward">If <c>true</c>, keep the shape's orientation consistent around the circle.</param>
+    /// <remarks>
+    /// The default is triangle, but I've included examples of other geometry.
+    /// </remarks>
     void CreatePolys(bool pointOutward = true)
     {
         if (PART_Canvas == null)
@@ -388,6 +391,7 @@ public partial class Spinner : UserControl
             double x = radius * Math.Cos(rad) + ActualWidth / 2 - DotSize / 2;
             double y = radius * Math.Sin(rad) + ActualHeight / 2 - DotSize / 2;
 
+            // Some basic shapes to choose from:
             var triangle = Geometry.Parse("M 0,0 L 6,0 3,6 Z");
             var equilateral = Geometry.Parse("M 0,1 L 0.5,0 1,1 Z");
             var diamond = Geometry.Parse("M 0.5,0 L 1,0.5 0.5,1 0,0.5 Z");
@@ -411,7 +415,7 @@ public partial class Spinner : UserControl
             };
 
             if (pointOutward)
-            {   // Keep the shape’s orientation consistent around the circle
+            {   // Keep the shape's orientation consistent around the circle
                 path.RenderTransform = new RotateTransform(angle + 90, DotSize / 2, DotSize / 2);
             }
 
