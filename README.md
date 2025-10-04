@@ -15,6 +15,19 @@
    recommended to keep the mode set to `SpinnerRenderMode.AnimatePositions` which employs the `CompositionTarget.Rendering` surface event.
 - Most render methods have their own data elements, however some are shared, e.g. the **Snow/Wind/Space** modes all use the `_rain` arrays.
 - Many of these modes/shapes could be used as a screen saver if you desire, e.g. the `Meteor1` and `Meteor2` mode are entertaining to watch in a maximized transparency window.
+- If you're looking for a basic/classic spinner, then the `Dots` and `Chase` modes are probably what you want.
+- Each mode is accompanied by appropriate configuration settings, e.g. the `Fountain` mode offers the following:
+    - `FountainBaseLife`
+    - `FountainBaseSpeed`
+    - `FountainGravity`
+    - `FountainFadeRate`
+    - `FountainFromBottom`
+    - `FountainSpreadDegrees`
+    - `FountainColorTransition`
+    - `FountainColorTransitionEaseOut`
+    - `FountainTransitionStartColor`
+    - `FountainTransitionMidColor`
+    - `FountainTransitionEndColor`
 
 ## Spinner Control
 
@@ -45,7 +58,8 @@ public enum SpinnerRenderShape
     Falling,    // for drop animation
     Explode,    // for explosion animation
     Fountain,   // for fountain animation
-    Progress,   // for progress bar animation
+    Radar,      // for radar arm animation
+    Progress,   // for "progress bar" animation
 }
 ```
 
