@@ -59,6 +59,7 @@ public enum SpinnerRenderShape
     Fountain,   // for fountain animation
     Radar,      // for radar arm animation
     Progress,   // for "progress bar" animation
+    Splash,     // for raining with splash animation
 }
 ```
 
