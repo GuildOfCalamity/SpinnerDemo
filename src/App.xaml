@@ -69,6 +69,20 @@
                     <GradientStop Offset="1.0" Color="Navy" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
+            <RadialGradientBrush x:Key="SplashBrushRadial1" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.5" Color="SkyBlue" />
+                    <GradientStop Offset="1.0" Color="DodgerBlue" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <RadialGradientBrush x:Key="SplashBrushRadial2" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="SkyBlue" />
+                    <GradientStop Offset="0.6" Color="DodgerBlue" />
+                    <GradientStop Offset="1.0" Color="White" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
             <RadialGradientBrush x:Key="SnowBrushRadial" GradientOrigin="0.75,0.25">
                 <RadialGradientBrush.GradientStops>
                     <GradientStop Offset="0.0" Color="White" />

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection.Metadata;
+using System.Security.Policy;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -49,6 +50,7 @@ public enum SpinnerRenderShape
     Fountain,  // for fountain animation
     Radar,     // for radar arm animation
     Progress,  // for "progress bar" animation
+    Splash,    // for raining with splash animation
 }
 
 /// <summary>
@@ -139,6 +141,8 @@ public partial class Spinner : UserControl
             CreateExplosion();
         else if (RenderShape == SpinnerRenderShape.Fountain)
             CreateFountain();
+        else if (RenderShape == SpinnerRenderShape.Splash)
+            CreateSplashDots();
         else
             CreateDots();
 
@@ -254,6 +258,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnRadarRendering;
         else if (RenderShape == SpinnerRenderShape.Progress)
             CompositionTarget.Rendering += OnProgressRendering;
+        else if (RenderShape == SpinnerRenderShape.Splash)
+            CompositionTarget.Rendering += OnSplashRendering;
         else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -309,6 +315,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnRadarRendering;
         else if (RenderShape == SpinnerRenderShape.Progress)
             CompositionTarget.Rendering -= OnProgressRendering;
+        else if (RenderShape == SpinnerRenderShape.Splash)
+            CompositionTarget.Rendering -= OnSplashRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -339,7 +347,7 @@ public partial class Spinner : UserControl
         PART_Canvas.Children.Clear();
         double radius = Math.Min(ActualWidth, ActualHeight) / 2 - DotSize;
 
-        // If you wanted to fetch a brush from the local UserControl:
+        // Fetch a brush from the local UserControl
         //Brush? brsh = (Brush)FindResource("DotBrush");
 
         for (int i = 0; i < DotCount; i++)
@@ -371,10 +379,7 @@ public partial class Spinner : UserControl
     /// <summary>
     /// Create path geometry instead of a standard <see cref="Ellipse"/>.
     /// </summary>
-    /// <param name="pointOutward">If <c>true</c>, keep the shape's orientation consistent around the circle.</param>
-    /// <remarks>
-    /// The default is triangle, but I've included examples of other geometry.
-    /// </remarks>
+    /// <param name="pointOutward"></param>
     void CreatePolys(bool pointOutward = true)
     {
         if (PART_Canvas == null)
@@ -391,7 +396,6 @@ public partial class Spinner : UserControl
             double x = radius * Math.Cos(rad) + ActualWidth / 2 - DotSize / 2;
             double y = radius * Math.Sin(rad) + ActualHeight / 2 - DotSize / 2;
 
-            // Some basic shapes to choose from:
             var triangle = Geometry.Parse("M 0,0 L 6,0 3,6 Z");
             var equilateral = Geometry.Parse("M 0,1 L 0.5,0 1,1 Z");
             var diamond = Geometry.Parse("M 0.5,0 L 1,0.5 0.5,1 0,0.5 Z");
@@ -415,7 +419,7 @@ public partial class Spinner : UserControl
             };
 
             if (pointOutward)
-            {   // Keep the shape's orientation consistent around the circle
+            {   // Keep the shape’s orientation consistent around the circle
                 path.RenderTransform = new RotateTransform(angle + 90, DotSize / 2, DotSize / 2);
             }
 
@@ -3048,7 +3052,7 @@ public partial class Spinner : UserControl
             CreateChase(DotSize / 2, ActualWidth / 2, ActualHeight / 2);
             return;
         }
-        
+
         double radius = ChaseRingRadius;
         if (radius == 0)
         {   // Use a percentage of the control's size
@@ -3179,8 +3183,10 @@ public partial class Spinner : UserControl
             _blips.Add(new RadarBlip
             {
                 Dot = dot,
-                X = x, Y = y,
-                VX = vx, VY = vy,
+                X = x,
+                Y = y,
+                VX = vx,
+                VY = vy,
                 Lifetime = 100 + Random.Shared.Next(100), // 2-5 seconds
                 Age = 0
             });
@@ -3205,7 +3211,7 @@ public partial class Spinner : UserControl
             double dx = blip.X - centerX;
             double dy = blip.Y - centerY;
             double dist = Math.Sqrt(dx * dx + dy * dy);
-            
+
             // Bounce back inward
             //if (dist > radius)
             //{
@@ -3257,7 +3263,7 @@ public partial class Spinner : UserControl
 
             // Random blip placement
             //double angle = Random.Shared.NextDouble() * Tau;
-            
+
             // Cone-adjacent blip placement
             double spread = 0.15; // radians (~9° cone around sweep)
             double angle = _sweepAngle + ((Random.Shared.NextDouble() - 0.5) * 2 * spread);
@@ -3358,8 +3364,8 @@ public partial class Spinner : UserControl
 
         // Advance sweep angle
         double dir = RadarClockwise ? -1.0 : 1.0;
-        _sweepAngle = (_sweepAngle + dir * (RadarSweepSpeed/100)) % Tau;
-        if (_sweepAngle < 0) 
+        _sweepAngle = (_sweepAngle + dir * (RadarSweepSpeed / 100)) % Tau;
+        if (_sweepAngle < 0)
             _sweepAngle += Tau;
 
         double radius = RadarRadius;
@@ -3383,9 +3389,9 @@ public partial class Spinner : UserControl
 
             // Excitation: strong near the arm, falls off by angle
             double excite = 0.0;
-            if (delta <= (RadarExciteWidth/10d))
+            if (delta <= (RadarExciteWidth / 10d))
             {
-                double t = delta / (RadarExciteWidth/10d);    // 0 at arm, 1 at edge
+                double t = delta / (RadarExciteWidth / 10d);    // 0 at arm, 1 at edge
                 excite = 1.0 - t;                  // linear falloff
                 // Optional: use a sharper curve
                 // excite = 1.0 - t * t;           // quadratic
@@ -3534,7 +3540,7 @@ public partial class Spinner : UserControl
 
     void UpdateSweepBeam(double cx, double cy, double r, double angle)
     {
-        if (_armBeam == null) 
+        if (_armBeam == null)
             return;
 
         double a1 = angle - (RadarBeamWidth / 10d) * 0.5;
@@ -3676,7 +3682,7 @@ public partial class Spinner : UserControl
                     pd.Dot.Opacity = _progressMinOpacity;
                 }
             }
-    
+
             //var dot = (UIElement)PART_Canvas.Children[i];
             var dot = (Ellipse)PART_Canvas.Children[i];
             dot.Opacity = pd.Dot.Opacity;
@@ -3685,6 +3691,221 @@ public partial class Spinner : UserControl
         }
     }
 
+
+
+    bool _addSplashWind = false;
+    double _rainAngleDegrees = 81; // 95 = slight right-leaning down
+    // Optional gentle wind (small horizontal acceleration)
+    double _windAX = 0.03;
+    double _gravityAY = 0.01; // keep 0 if you want constant speed rain; set e.g. 0.05 to accelerate
+
+    List<FallingDot> _falling;
+    List<SplashParticle> _splash;
+    public int SplashBaseCount { get; set; } = 4;
+    public double SplashConeDegrees { get; set; } = 0; // zero ⇨ use natural cone
+    public double SplashBaseSpeed { get; set; } = 4.0;
+    public double SplashGravity { get; set; } = 24; // 0.24
+    public double SplashBaseLife { get; set; } = 6.0; // base lifetime in frames for splash particles
+    public bool SplashExplode { get; set; } = false;
+    public Brush SplashBrush { get; set; } = new SolidColorBrush(Color.FromRgb(30, 100, 250)); // blue
+    void CreateSplashDots(int count = 0)
+    {
+        if (PART_Canvas == null)
+            return;
+
+        if (_falling == null)
+            _falling = new List<FallingDot>();
+        if (_splash == null)
+            _splash = new List<SplashParticle>();
+        if (count <= 0)
+            count = DotCount;
+
+        // Constrain to middle 80% of control's width for spawning
+        double margin = ActualWidth * 0.1;
+        double usableWidth = ActualWidth * 0.8;
+
+        // Wind parameters
+        double speedMin = 2.0;
+        double speedMax = 4.0;
+        double angleJitterDeg = 3.0;
+
+        for (int i = 0; i < count; i++)
+        {
+            // Slight randomization around _rainAngleDegrees to avoid perfect uniformity
+            double jitter = (Random.Shared.NextDouble() * 2.0 - 1.0) * angleJitterDeg;
+            double speed = speedMin + Random.Shared.NextDouble() * (speedMax - speedMin);
+            double angle = _rainAngleDegrees + jitter;
+            var (vx, vy) = VelocityFromAngle(speed, angle);
+
+            double x = margin + Random.Shared.NextDouble() * usableWidth;
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                Opacity = 1.0
+            };
+            Canvas.SetLeft(dot, x - dot.Width / 2.0);
+            Canvas.SetTop(dot, 0.0); //Canvas.SetTop(dot, -dot.Height);
+            PART_Canvas.Children.Add(dot);
+            _falling.Add(new FallingDot
+            {
+                Dot = dot,
+                X = x, Y = 0.0, //Y = -dot.Height,
+                VX = vx, VY = vy,
+                VelocityY = SplashBaseSpeed + Random.Shared.NextDouble() * 3.0
+            });
+        }
+    }
+
+    void OnSplashRendering(object? sender, EventArgs e)
+    {
+        if (_falling == null || _splash == null)
+        {
+            CreateSplashDots(DotCount);
+            return;
+        }
+
+        // We spawn new dots based on how many crossed the threshold (85% down the control)
+        int crossedCount = 0;
+        double thresholdY = ActualHeight * 5.0 / 6.0;
+
+        // Update falling dots
+        for (int i = _falling.Count - 1; i >= 0; i--)
+        {
+            var fd = _falling[i];
+            double prevY = fd.Y;
+
+            if (_addSplashWind)
+            {
+                // Slight wind effect
+                fd.VX += _windAX;
+                fd.VY += _gravityAY;
+                fd.X += fd.VX;
+                fd.Y += fd.VY;
+            }
+            else // no wind effect
+            {
+                fd.Y += fd.VelocityY;
+            }
+
+            Canvas.SetLeft(fd.Dot, fd.X - fd.Dot.Width / 2.0);
+            Canvas.SetTop(fd.Dot, fd.Y);
+
+            // Cull if dot goes off-screen horizontally (if wind enabled)
+            if (fd.X < -fd.Dot.Width || fd.X > ActualWidth + fd.Dot.Width)
+            {
+                PART_Canvas.Children.Remove(fd.Dot);
+                _falling.RemoveAt(i);
+                if (crossedCount < DotCount) 
+                    crossedCount++;
+                continue;
+            }
+
+            // Count if just crossed 85% height
+            if (prevY < thresholdY && fd.Y >= thresholdY && _falling.Count < (DotCount + 1))
+                crossedCount++;
+
+            // Cull if dot goes off-screen vertically
+            if (fd.Y >= ActualHeight - fd.Dot.Height)
+            {
+                PART_Canvas.Children.Remove(fd.Dot);
+                _falling.RemoveAt(i);
+                SpawnSplash(fd.X, ActualHeight - (DotSize/2.0));
+            }
+        }
+
+        // Update splash particles
+        for (int i = _splash.Count - 1; i >= 0; i--)
+        {
+            var sp = _splash[i];
+            sp.Age++;
+            sp.X += sp.VX;
+            sp.Y += sp.VY;
+            sp.VY += SplashGravity / 100.0; // add gravity each frame
+            double t = sp.Age / sp.Lifetime;
+            double size = SplashExplode ? sp.Dot.Width * (1.0 - t) : (DotSize * 1.25) * (1.0 - t);
+            sp.Dot.Opacity = 1.0 - t;
+            sp.Dot.Width = size;
+            sp.Dot.Height = size;
+            Canvas.SetLeft(sp.Dot, sp.X - size / 2.0);
+            Canvas.SetTop(sp.Dot, sp.Y - size / 2.0);
+            if (sp.Age >= sp.Lifetime)
+            {
+                PART_Canvas.Children.Remove(sp.Dot);
+                _splash.RemoveAt(i);
+            }
+        }
+
+        // Randomly spawn new falling dots
+        //if (Random.Shared.NextDouble() < 0.02)
+        //    CreateSplashDots(Random.Shared.Next(1, DotCount));
+
+        // Spawn new dots equal to how many crossed threshold
+        if (_falling.Count == 0 || (crossedCount > 0 && crossedCount < DotCount))
+            CreateSplashDots(crossedCount);
+    }
+
+    void SpawnSplash(double x, double y)
+    {
+        double upwardBoost = 1.05; // upward boost in velocity Y
+        int count = SplashBaseCount + Random.Shared.Next(SplashBaseCount);
+
+        for (int i = 0; i < count; i++)
+        {
+            #region [angle/speed experiments]
+            double angle = 0;
+            double speed = 1.25 + Random.Shared.NextDouble() * 3.0;
+
+            // 180° random
+            //angle = Random.Shared.NextDouble() * Tau;
+
+            // 90° random
+            //angle = (-Math.PI / 2.0) + (Random.Shared.NextDouble() - 0.5) * Math.PI / 2.0;
+
+            // Bias toward upward by squaring a random
+            //double t = Random.Shared.NextDouble();
+            //angle = -Math.PI / 2 + (t * t - 0.5) * Math.PI;
+
+            if (IsZero(SplashConeDegrees)) // natural splash cone
+            {
+                angle = Random.Shared.NextDouble() * Tau;
+            }
+            else // user defined splash cone
+            {
+                double coneCenter = -Math.PI / 2;
+                double coneWidth = DegreesToRadians(SplashConeDegrees);
+
+                // Pick a random angle within the cone
+                double halfWidth = coneWidth / 2;
+                angle = coneCenter + (Random.Shared.NextDouble() * coneWidth - halfWidth);
+            }
+
+            double vx = Math.Cos(angle) * speed;
+            double vy = -Math.Abs(Math.Sin(angle) * speed * upwardBoost);
+            #endregion
+
+            var dot = new Ellipse
+            {
+                Width = SplashExplode ? DotSize * 8.0 : DotSize,
+                Height = SplashExplode ? DotSize * 8.0 : DotSize,
+                Fill = SplashBrush,
+                Opacity = 1.0
+            };
+            Canvas.SetLeft(dot, x - dot.Width / 2.0);
+            Canvas.SetTop(dot, y - dot.Height / 2.0);
+            PART_Canvas.Children.Add(dot);
+            _splash.Add(new SplashParticle
+            {
+                Dot = dot,
+                X = x, Y = y,
+                VX = vx, // VX = Math.Cos(angle) * speed,
+                VY = vy, // VY = -Math.Abs(Math.Sin(angle) * speed),
+                Age = 0,
+                Lifetime = SplashBaseLife + Random.Shared.Next(30) // frames
+            });
+        }
+    }
     #endregion
 
     #region [Color Helpers]
@@ -3827,6 +4048,39 @@ public partial class Spinner : UserControl
 
     #region [Angle Helpers]
     /// <summary>
+    /// Converts a total angle (in <paramref name="degrees"/>) into radians for use as a cone width.<br/>
+    /// Example: 60 ⇨ Math.PI ÷ 3<br/>
+    /// </summary>
+    static double DegreesToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180.0;
+
+        #region [Examples]
+        // Wide, 120° cone
+        //double coneCenter = -Math.PI / 2;
+        //double coneWidth = Tau / 3;
+
+        // Straight up, 60° cone
+        //double coneCenter = -Math.PI / 2;
+        //double coneWidth = Math.PI / 3;
+
+        // Straight up, 30° cone
+        //double coneCenter = -Math.PI / 2;
+        //double coneWidth = Math.PI / 6;
+        #endregion
+    }
+
+    /// <summary>
+    /// Returns (vx, vy) for a given speed and angle in degrees.
+    /// In WPF: 0° is right, 90° is down, 180° is left, 270° is up.
+    /// </summary>
+    static (double vx, double vy) VelocityFromAngle(double speed, double angleDegrees)
+    {
+        double a = DegreesToRadians(angleDegrees);
+        return (Math.Cos(a) * speed, Math.Sin(a) * speed);
+    }
+
+    /// <summary>
     /// Wrap to [-π, π]
     /// </summary>
     static double WrapAngle(double ang)
@@ -3834,6 +4088,32 @@ public partial class Spinner : UserControl
         ang = (ang + Math.PI) % Tau;
         if (ang < 0) { ang += Tau; }
         return ang - Math.PI;
+    }
+    #endregion
+
+    #region [Compare Helpers]
+    static bool IsZero(double value) => Math.Abs(value) < Epsilon;
+    static bool IsZeroOrLess(double value) => value < Epsilon;
+    static bool IsInvalid(double value)
+    {
+        if (value == double.NaN || value == double.NegativeInfinity || value == double.PositiveInfinity) { return true; }
+        return false;
+    }
+    static bool IsInvalidOrZero(double value)
+    {
+        if (value == double.NaN || value == double.NegativeInfinity || value == double.PositiveInfinity || value <= 0) { return true; }
+        return false;
+    }
+    static bool IsOne(double value)
+    {
+        return Math.Abs(value) >= 1d - Epsilon && Math.Abs(value) <= 1d + Epsilon;
+    }
+    static bool AreClose(double left, double right)
+    {
+        if (left == right) { return true; }
+        double a = (Math.Abs(left) + Math.Abs(right) + 10.0d) * Epsilon;
+        double b = left - right;
+        return (-a < b) && (a > b);
     }
     #endregion
 
@@ -4070,6 +4350,22 @@ public partial class Spinner : UserControl
 }
 
 #region [Support Classes]
+public class FallingDot
+{
+    public Ellipse Dot;
+    public double X, Y;
+    public double VX, VY; // optional horizontal velocity
+    public double VelocityY;
+}
+
+public class SplashParticle
+{
+    public Ellipse Dot;
+    public double X, Y;
+    public double VX, VY;
+    public double Age, Lifetime;
+}
+
 public class ProgressDot
 {
     public Ellipse Dot;

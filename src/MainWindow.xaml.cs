@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -59,7 +60,25 @@ public partial class MainWindow : Window
 
     void Window_KeyUp(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.PrintScreen)
+        if (_frameCapture && e.Key == Key.Space)
+        {
+            int count = 0;
+            foreach (var enc in _encoders)
+            {
+                count++;
+                var filePath = $"capture_{count:D3}.png";
+                try
+                {
+                    using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                    {
+                        enc.Save(fs);
+                    }
+                }
+                catch (Exception) { }
+            }
+            _encoders.Clear();
+        }
+        else if (e.Key != Key.PrintScreen)
         {
             _popTimer?.Stop();
             _captureTimer?.Stop();
@@ -106,14 +125,13 @@ public partial class MainWindow : Window
         _popTimer?.Stop();
     }
 
-    int _captureCounter = 0;
     void captureTimer_Tick(object? sender, EventArgs e)
     {
-        _captureCounter++;
-        SaveElementAsPng(hostBorder, $"capture_{_captureCounter:D3}.png");
+        SaveElementAsPng(hostBorder);
     }
 
-    void SaveElementAsPng(FrameworkElement element, string filePath)
+    List<PngBitmapEncoder> _encoders = new List<PngBitmapEncoder>();
+    void SaveElementAsPng(FrameworkElement element)
     {
         if (element == null) { return; }
         Size size = new Size(element.ActualWidth, element.ActualHeight);
@@ -123,14 +141,7 @@ public partial class MainWindow : Window
         rtb.Render(element);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(rtb));
-        try
-        {
-            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-            {
-                encoder.Save(fs);
-            }
-        }
-        catch (Exception) { }
+        _encoders.Add(encoder);
     }
     #endregion
 }
