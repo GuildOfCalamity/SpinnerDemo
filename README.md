@@ -60,7 +60,10 @@ public enum SpinnerRenderShape
     Radar,      // for radar arm animation
     Progress,   // for "progress bar" animation
     Splash,     // for raining with splash animation
+    Fireworks,  // for launch and explode animation
 }
 ```
 
 ![Running](./src/Assets/Demo.gif)
+
+![Example](./src/Assets/Firework.gif)
