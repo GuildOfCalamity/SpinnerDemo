@@ -81,6 +81,7 @@
                 WindAmplitude="1"
                 WindFrequency="0.5" />
 
+            <!--  Wind  -->
             <ctrl:Spinner
                 Grid.Row="0"
                 Grid.Column="1"
@@ -91,9 +92,6 @@
                 VerticalAlignment="Stretch"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                BounceCollisions="False"
-                BounceLowOpacity="True"
-                BounceSpeed="50"
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="20"
                 DotSize="12"
@@ -101,17 +99,12 @@
                 LineLowOpacity="True"
                 RenderMode="AnimatePositions"
                 RenderShape="Wind"
-                RingsAlternateOpacity="True"
-                RingsAngleSpeed="1"
-                RingsCount="4"
-                RingsOutward="True"
-                SnowBaseSpeed="50"
-                SnowLowOpacity="False"
                 WaveAmplitude="12"
                 WaveDuration="1.1"
                 WindAmplitude="1"
                 WindFrequency="0.5" />
 
+            <!--  Snow  -->
             <ctrl:Spinner
                 Grid.Row="0"
                 Grid.Column="2"
@@ -128,14 +121,12 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Snow"
                 RingsAlternateOpacity="True"
-                RingsAngleSpeed="1"
-                RingsCount="4"
-                RingsOutward="True"
                 SnowBaseSpeed="50"
                 SnowLowOpacity="False"
                 WindAmplitude="1"
                 WindFrequency="0.9" />
 
+            <!--  Pulse  -->
             <ctrl:Spinner
                 Grid.Row="1"
                 Grid.Column="0"
@@ -157,6 +148,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Pulse" />
 
+            <!--  Rings  -->
             <ctrl:Spinner
                 Grid.Row="1"
                 Grid.Column="1"
@@ -167,9 +159,6 @@
                 VerticalAlignment="Stretch"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                BounceCollisions="False"
-                BounceLowOpacity="True"
-                BounceSpeed="50"
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="20"
                 DotSize="12"
@@ -180,6 +169,7 @@
                 RingsCount="2"
                 RingsOutward="True" />
 
+            <!--  Space  -->
             <ctrl:Spinner
                 Grid.Row="1"
                 Grid.Column="2"
@@ -196,13 +186,6 @@
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="20"
                 DotSize="6"
-                LineBaseSpeed="150"
-                LineLowOpacity="True"
-                PulseAlternateOpacity="False"
-                PulseCount="2"
-                PulseLowOpacity="True"
-                PulseRadiusFactor="2"
-                PulseSpeed="2"
                 RenderMode="AnimatePositions"
                 RenderShape="Space"
                 RingsAlternateOpacity="True"
@@ -210,6 +193,7 @@
                 RingsCount="3"
                 RingsOutward="True" />
 
+            <!--  Spiral  -->
             <ctrl:Spinner
                 Grid.Row="0"
                 Grid.Column="3"
@@ -233,6 +217,7 @@
                 SpiralRotationAngle="0.11"
                 SpiralTwistDensity="0.61" />
 
+            <!--  Spiral (alt)  -->
             <ctrl:Spinner
                 Grid.Row="2"
                 Grid.Column="1"
@@ -256,6 +241,7 @@
                 SpiralRotationAngle="0.11"
                 SpiralTwistDensity="0.4" />
 
+            <!--  Stripe  -->
             <ctrl:Spinner
                 Grid.Row="1"
                 Grid.Column="4"
@@ -272,23 +258,12 @@
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="20"
                 DotSize="6"
-                LineBaseSpeed="150"
-                LineLowOpacity="True"
-                PulseAlternateOpacity="False"
-                PulseCount="2"
-                PulseLowOpacity="True"
-                PulseRadiusFactor="2"
-                PulseSpeed="2"
                 RenderMode="AnimatePositions"
                 RenderShape="Stripe"
                 StripeBaseSpeed="40"
-                StripeLowOpacity="False"
-                TwinkleSpeed="6"
-                WaveAmplitude="12"
-                WaveDuration="1.1"
-                WindAmplitude="1"
-                WindFrequency="0.5" />
+                StripeLowOpacity="False" />
 
+            <!--  Worm  -->
             <ctrl:Spinner
                 Grid.Row="2"
                 Grid.Column="0"
@@ -305,13 +280,6 @@
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="20"
                 DotSize="6"
-                LineBaseSpeed="150"
-                LineLowOpacity="True"
-                PulseAlternateOpacity="False"
-                PulseCount="2"
-                PulseLowOpacity="True"
-                PulseRadiusFactor="2"
-                PulseSpeed="2"
                 RenderMode="AnimatePositions"
                 RenderShape="Worm"
                 StripeBaseSpeed="40"
@@ -320,6 +288,7 @@
                 WormInOutSpeed="0.7"
                 WormMaxRadius="40" />
 
+            <!--  Square  -->
             <ctrl:Spinner
                 Grid.Row="3"
                 Grid.Column="0"
@@ -337,10 +306,9 @@
                 RenderShape="Square"
                 SquareClockwise="True"
                 SquareSize="100"
-                SquareStep="2"
-                StripeBaseSpeed="40"
-                StripeLowOpacity="False" />
+                SquareStep="2" />
 
+            <!--  Twinkle  -->
             <ctrl:Spinner
                 Grid.Row="2"
                 Grid.Column="4"
@@ -354,15 +322,11 @@
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="40"
                 DotSize="5"
-                PulseAlternateOpacity="False"
-                PulseCount="2"
-                PulseLowOpacity="True"
-                PulseRadiusFactor="2"
-                PulseSpeed="2"
                 RenderMode="AnimatePositions"
                 RenderShape="Twinkle1"
                 TwinkleSpeed="8" />
 
+            <!--  Bounce  -->
             <ctrl:Spinner
                 Grid.Row="2"
                 Grid.RowSpan="1"
@@ -383,6 +347,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Bounce" />
 
+            <!--  Bounce (collision detection)  -->
             <ctrl:Spinner
                 Grid.Row="2"
                 Grid.RowSpan="1"
@@ -403,7 +368,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Bounce" />
 
-
+            <!--  Line  -->
             <ctrl:Spinner
                 Grid.Row="1"
                 Grid.RowSpan="1"
@@ -426,6 +391,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Line" />
 
+            <!--  Twinkle  -->
             <ctrl:Spinner
                 Grid.Row="3"
                 Grid.RowSpan="1"
@@ -444,6 +410,7 @@
                 RenderShape="Twinkle2"
                 TwinkleSpeed="14" />
 
+            <!--  Dots (basic)  -->
             <ctrl:Spinner
                 Grid.Row="3"
                 Grid.RowSpan="1"
@@ -462,6 +429,7 @@
                 RenderShape="Dots"
                 WaveDuration="2" />
 
+            <!--  Polys (shape geometry)  -->
             <ctrl:Spinner
                 Grid.Row="3"
                 Grid.RowSpan="1"
@@ -480,7 +448,7 @@
                 RenderShape="Polys"
                 WaveDuration="3" />
 
-
+            <!--  Fireworks  -->
             <ctrl:Spinner
                 Grid.Row="3"
                 Grid.RowSpan="1"
@@ -492,36 +460,21 @@
                 VerticalAlignment="Stretch"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                BounceCollisions="False"
-                BounceLowOpacity="True"
-                BounceSpeed="50"
-                DotBrush="{StaticResource SnowBrushRadial}"
-                DotCount="30"
-                DotSize="12"
-                LineBaseSpeed="150"
-                LineLowOpacity="True"
-                MeteorReduceLoad="False"
-                MeteorShootChance="0.75"
-                MeteorSpeed="3"
-                MeteorSpread360="False"
-                MeteorSpreadAngle="50"
-                MeteorTrailColor="LightGray"
-                MeteorTrailFactor="1.7"
-                MeteorTrailLength="8"
-                PulseAlternateOpacity="False"
-                PulseCount="4"
-                PulseLowOpacity="True"
-                PulseRadiusFactor="2"
-                PulseSpeed="1"
+                DotBrush="{StaticResource BlipBrushRadial}"
+                DotCount="3"
+                DotSize="6"
+                FireworkBaseSpeed="3"
+                FireworkBrush1="{StaticResource FireworkBrushRadial1}"
+                FireworkBrush2="{StaticResource FireworkBrushRadial2}"
+                FireworkBrush3="{StaticResource FireworkBrushRadial3}"
+                FireworkExplosionSpeed="1"
+                FireworkGravity="1.5"
+                FireworkLifetime="30"
+                FireworkParticleCount="5"
                 RenderMode="AnimatePositions"
-                RenderShape="Meteor1"
-                RingsAlternateOpacity="True"
-                RingsAngleSpeed="1"
-                RingsCount="4"
-                RingsOutward="True"
-                SnowBaseSpeed="50"
-                SnowLowOpacity="True" />
+                RenderShape="Fireworks" />
 
+            <!--  Meteor  -->
             <ctrl:Spinner
                 Grid.Row="0"
                 Grid.RowSpan="1"
@@ -549,38 +502,10 @@
                 MeteorTrailColor="LightGray"
                 MeteorTrailFactor="1.7"
                 MeteorTrailLength="8"
-                PulseAlternateOpacity="False"
-                PulseCount="4"
-                PulseLowOpacity="True"
-                PulseRadiusFactor="2"
-                PulseSpeed="1"
                 RenderMode="AnimatePositions"
-                RenderShape="Meteor2"
-                RingsAlternateOpacity="True"
-                RingsAngleSpeed="1"
-                RingsCount="4"
-                RingsOutward="True"
-                SnowBaseSpeed="50"
-                SnowLowOpacity="True"
-                SpiralArmCount="3"
-                SpiralClockwise="False"
-                SpiralDotSpacing="5"
-                SpiralFadeOut="True"
-                SpiralLowOpacity="False"
-                SpiralRotationAngle="0.11"
-                SpiralTwistDensity="0.11"
-                SquareClockwise="True"
-                SquareSize="0"
-                SquareStep="2"
-                StripeBaseSpeed="40"
-                StripeLowOpacity="True"
-                TwinkleSpeed="6"
-                WaveAmplitude="12"
-                WaveDuration="1.1"
-                WindAmplitude="1"
-                WindFrequency="0.5" />
+                RenderShape="Meteor2" />
 
-
+            <!--  Falling  -->
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -603,6 +528,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Falling" />
 
+            <!--  Falling (alt)  -->
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -626,6 +552,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Falling" />
 
+            <!--  Fountain  -->
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -653,6 +580,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Fountain" />
 
+            <!--  Fountain (alt)  -->
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -681,6 +609,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Fountain" />
 
+            <!--  Explode  -->
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -701,7 +630,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Explode" />
 
-            <!-- [expands past control borders]
+            <!-- Explode (expands past borders)
             <ctrl:Spinner
                 Grid.Row="4"
                 Grid.RowSpan="1"
@@ -723,7 +652,7 @@
                 RenderShape="Explode" />
             -->
 
-
+            <!--  Radar  -->
             <ctrl:Spinner
                 Grid.Row="5"
                 Grid.RowSpan="1"
@@ -748,6 +677,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Radar" />
 
+            <!--  Progress  -->
             <ctrl:Spinner
                 Grid.Row="5"
                 Grid.RowSpan="1"
@@ -767,6 +697,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Progress" />
 
+            <!--  Splash  -->
             <ctrl:Spinner
                 Grid.Row="5"
                 Grid.RowSpan="1"
@@ -789,6 +720,7 @@
                 SplashExplode="False"
                 SplashGravity="25" />
 
+            <!--  Chase  -->
             <ctrl:Spinner
                 Grid.Row="5"
                 Grid.RowSpan="1"
@@ -810,6 +742,7 @@
                 RenderMode="AnimatePositions"
                 RenderShape="Chase" />
 
+            <!--  Chase (alt)  -->
             <ctrl:Spinner
                 Grid.Row="5"
                 Grid.RowSpan="1"
@@ -876,6 +809,7 @@
                                 RenderOptions.BitmapScalingMode="Fant"
                                 Source="/Assets/AppIcon.png" />
                             <TextBlock
+                                x:Name="tbPopup"
                                 Grid.Column="1"
                                 Margin="15,0,0,0"
                                 HorizontalAlignment="Left"

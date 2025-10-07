@@ -51,6 +51,7 @@ public enum SpinnerRenderShape
     Radar,     // for radar arm animation
     Progress,  // for "progress bar" animation
     Splash,    // for raining with splash animation
+    Fireworks, // for launch and explode animation
 }
 
 /// <summary>
@@ -73,7 +74,7 @@ public partial class Spinner : UserControl
     bool hasAppliedTemplate = false;
     bool _renderHooked = false;
     double _angle = 0.0;
-    const double Tau = 2 * Math.PI;
+    const double Tau = 2.0 * Math.PI;
     const double Epsilon = 0.000000000001;
 
     public int DotCount { get; set; } = 10;
@@ -143,6 +144,8 @@ public partial class Spinner : UserControl
             CreateFountain();
         else if (RenderShape == SpinnerRenderShape.Splash)
             CreateSplashDots();
+        else if (RenderShape == SpinnerRenderShape.Fireworks)
+            CreateFireworkDots();
         else
             CreateDots();
 
@@ -260,6 +263,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnProgressRendering;
         else if (RenderShape == SpinnerRenderShape.Splash)
             CompositionTarget.Rendering += OnSplashRendering;
+        else if (RenderShape == SpinnerRenderShape.Fireworks)
+            CompositionTarget.Rendering += OnFireworkRendering;
         else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -317,6 +322,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnProgressRendering;
         else if (RenderShape == SpinnerRenderShape.Splash)
             CompositionTarget.Rendering -= OnSplashRendering;
+        else if (RenderShape == SpinnerRenderShape.Fireworks)
+            CompositionTarget.Rendering -= OnFireworkRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -3906,6 +3913,217 @@ public partial class Spinner : UserControl
             });
         }
     }
+
+
+
+    List<FireworkDot> _fireworks;
+    public int FireworkParticleCount { get; set; } = 5;
+    public double FireworkBaseSpeed { get; set; } = 3.0;
+    public double FireworkExplosionSpeed { get; set; } = 1.0;
+    public double FireworkGravity { get; set; } = 1.9;
+    public int FireworkLifetime { get; set; } = 30;
+    public Brush FireworkBrush1 { get; set; } = new SolidColorBrush(Color.FromRgb(250, 200, 10));
+    public Brush FireworkBrush2 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 250, 160));
+    public Brush FireworkBrush3 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 160, 250));
+    void CreateFireworkDots()
+    {
+        if (_fireworks == null)
+            _fireworks = new List<FireworkDot>();
+        if (_splash == null)
+            _splash = new List<SplashParticle>();
+
+        // Constrain to middle 60% of control's width for spawning
+        double margin = ActualWidth * 0.2;
+        double usableWidth = ActualWidth * 0.6;
+
+        for (int i = 0; i < DotCount; i++)
+        {
+            double x = margin + Random.Shared.NextDouble() * usableWidth;
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = DotBrush,
+                Opacity = 1.0
+            };
+            Canvas.SetLeft(dot, x - dot.Width / 2.0);
+            Canvas.SetTop(dot, ActualHeight - dot.Height); // start at bottom
+            PART_Canvas.Children.Add(dot);
+
+            // Launch upward with some velocity
+            double vy = -(FireworkBaseSpeed + Random.Shared.NextDouble() * FireworkBaseSpeed); // upward
+            double vx = (Random.Shared.NextDouble() - 0.5) * 2.0; // sideways drift
+
+            // Random apex height (somewhere between 30% and 60% of canvas height)
+            //double apexY = ActualHeight * (0.3 + Random.Shared.NextDouble() * 0.3);
+
+            // General pattern
+            //double minRatio = 0.2; // lower bound (20% of height)
+            //double maxRatio = 0.4; // upper bound (40% of height)
+            //// Apex between 20% and 40% of height
+            //double apexY = ActualHeight * (minRatio + Random.Shared.NextDouble() * (maxRatio - minRatio));
+
+            if (FireworkGravity <= 0)
+                FireworkGravity = 1;
+
+            // Gravity strength (should match update loop)
+            double g = (FireworkGravity / 10.0);
+
+            /*  Launch velocity determines apex height
+             *   ⮞ Faster launches ═ higher arcs
+             *   ⮞ Slower launches ═ lower arcs
+             */
+            // Physics-based apex offset
+            double apexOffset = (vy * vy) / (2.0 * g);
+            // Apex Y = starting Y - offset
+            double apexY = (ActualHeight - (dot.Height + 1.0)) - apexOffset;
+
+            // Clamp into a configurable band
+            double minY = ActualHeight * 0.1; // 10% from top
+            double maxY = ActualHeight * 0.4; // 40% from top
+            apexY = Math.Min(Math.Max(apexY, minY), maxY);
+
+            // Add a little randomness so not all arcs are identical
+            apexY *= (0.9 + Random.Shared.NextDouble() * 0.2);
+
+            _fireworks.Add(new FireworkDot
+            {
+                Dot = dot,
+                X = x, Y = ActualHeight - dot.Height,
+                VX = vx, VY = vy,
+                ApexY = apexY
+            });
+        }
+    }
+
+    void OnFireworkRendering(object? sender, EventArgs e)
+    {
+        if (_fireworks == null || _fireworks.Count == 0)
+        {
+            CreateFireworkDots();
+            return;
+        }
+
+        // Update every dot's position and velocity
+        for (int i = _fireworks.Count - 1; i >= 0; i--)
+        {
+            var ld = _fireworks[i];
+            // Apply velocity
+            ld.X += ld.VX; ld.Y += ld.VY;
+            // Gravity pulls down
+            ld.VY += (FireworkGravity / 10.0);
+            Canvas.SetLeft(ld.Dot, ld.X - ld.Dot.Width / 2);
+            Canvas.SetTop(ld.Dot, ld.Y);
+            // Check if reached apex (velocity downward, or passed random apexY)
+            if (ld.VY >= 0 || ld.Y <= ld.ApexY)
+            {
+                PART_Canvas.Children.Remove(ld.Dot);
+                _fireworks.RemoveAt(i);
+                SpawnExplosion(ld.X, ld.Y);
+            }
+        }
+
+        UpdateExplosionParticles();
+    }
+
+    Brush? selected;
+    void SpawnExplosion(double x, double y)
+    {
+        int count = FireworkParticleCount + Random.Shared.Next(FireworkParticleCount);
+        selected = Random.Shared.NextDouble() > 0.65 ? FireworkBrush1 : Random.Shared.NextDouble() > 0.49 ? FireworkBrush2 : FireworkBrush3;
+        for (int i = 0; i < count; i++)
+        {
+            double angle = Random.Shared.NextDouble() * Tau;
+            double speed = FireworkExplosionSpeed + Random.Shared.NextDouble() * 4.0;
+            var dot = new Ellipse
+            {
+                Width = (DotSize / 2.0) + Random.Shared.NextDouble() * DotSize,
+                Height = (DotSize / 2.0) + Random.Shared.NextDouble() * DotSize,
+                Fill = selected,
+                Opacity = 1.0
+            };
+            Canvas.SetLeft(dot, x - dot.Width / 2.0);
+            Canvas.SetTop(dot, y - dot.Height / 2.0);
+            PART_Canvas.Children.Add(dot);
+            _splash.Add(new SplashParticle
+            {
+                Dot = dot,
+                X = x, Y = y,
+                VX = Math.Cos(angle) * speed, VY = Math.Sin(angle) * speed,
+                Age = 0, Lifetime = FireworkLifetime + Random.Shared.Next(FireworkLifetime)
+            });
+        }
+    }
+
+    void UpdateExplosionParticles()
+    {
+        double marginX = ActualWidth * 0.1;
+        double marginY = ActualHeight * 0.1;
+
+        double leftBound = marginX;
+        double rightBound = ActualWidth - marginX;
+        double topBound = marginY;
+        double bottomBound = ActualHeight - marginY;
+
+        for (int i = _splash.Count - 1; i >= 0; i--)
+        {
+            var sp = _splash[i];
+            sp.Age++;
+
+            // Apply velocity
+            sp.X += sp.VX;
+            sp.Y += sp.VY;
+
+            // Apply gravity
+            sp.VY += (FireworkGravity / 10.0);
+
+            // Normalize lifetime progression
+            double t = sp.Age / sp.Lifetime;
+
+            // Check if particle is outside boundary
+            //bool outOfBounds = sp.X < leftBound || sp.X > rightBound || sp.Y < topBound || sp.Y > bottomBound;
+            //if (outOfBounds) { t = 1.0; } // Force fade faster
+            //sp.Dot.Opacity = 1.0 - t;
+
+            #region [Gradual edge fade]
+            double edgeFade = 1.0; // multiplier
+            if (sp.X < leftBound)
+                edgeFade = (sp.X / leftBound); // 1 ⇨ boundary, 0 ⇨ edge
+            else if (sp.X > rightBound)
+                edgeFade = ((ActualWidth - sp.X) / marginX);
+            if (sp.Y < topBound)
+                edgeFade = Math.Min(edgeFade, (sp.Y / topBound));
+            else if (sp.Y > bottomBound)
+                edgeFade = Math.Min(edgeFade, ((ActualHeight - sp.Y) / marginY));
+
+            edgeFade = Math.Max(0, Math.Min(1, edgeFade));
+            #endregion
+
+            // Combine lifetime fade and edge fade
+            double opacity = (1.0 - t) * edgeFade;
+            sp.Dot.Opacity = opacity;
+
+            double size = Math.Max(1, DotSize * (1.0 - t));
+            sp.Dot.Width = size;
+            sp.Dot.Height = size;
+
+            Canvas.SetLeft(sp.Dot, sp.X - size / 2.0);
+            Canvas.SetTop(sp.Dot, sp.Y - size / 2.0);
+
+            //if (sp.Age >= sp.Lifetime || t >= 1.0)
+            //{
+            //    PART_Canvas.Children.Remove(sp.Dot);
+            //    _splash.RemoveAt(i);
+            //}
+
+            // Remove particle if fully faded or lifetime exceeded
+            if (sp.Age >= sp.Lifetime || opacity <= 0.01)
+            {
+                PART_Canvas.Children.Remove(sp.Dot);
+                _splash.RemoveAt(i);
+            }
+        }
+    }
     #endregion
 
     #region [Color Helpers]
@@ -4089,6 +4307,8 @@ public partial class Spinner : UserControl
         if (ang < 0) { ang += Tau; }
         return ang - Math.PI;
     }
+
+    static double Clamp(double value, double min, double max) => Math.Min(Math.Max(value, min), max);
     #endregion
 
     #region [Compare Helpers]
@@ -4350,6 +4570,14 @@ public partial class Spinner : UserControl
 }
 
 #region [Support Classes]
+public class FireworkDot
+{
+    public Ellipse Dot;
+    public double X, Y;
+    public double VX, VY;
+    public double ApexY; // random apex trigger
+}
+
 public class FallingDot
 {
     public Ellipse Dot;

@@ -29,27 +29,17 @@ public partial class MainWindow : Window
         this.Icon = "pack://application:,,,/Assets/AppIcon.png".ReturnImageSource();
         if (_frameCapture && _captureTimer == null)
         {
+            tbPopup.Text = "Press [SPACE] to save captured frames, press any other key to exit.";
             // Remove old captures if they exist
             var pngFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "cap*.png", SearchOption.TopDirectoryOnly);
-            foreach (var fn in pngFiles)
-            {
-                try
-                {
-                    File.Delete(fn);
-                }
-                catch { }
-            }
+            foreach (var fn in pngFiles) { try { File.Delete(fn); } catch { } }
             _captureTimer = new System.Windows.Threading.DispatcherTimer();
-            // We don't want to capture too fast as to bog down the app,
-            // but we also don't want a choppy framerate for the gif clip.
-            _captureTimer.Interval = TimeSpan.FromSeconds(0.2);
+            // Adjust this time based on the desired framerate for the GIF.
+            _captureTimer.Interval = TimeSpan.FromMilliseconds(100);
             _captureTimer.Tick += captureTimer_Tick;
             _captureTimer.Start();
         }
-        else
-        {
-            mainPopup.IsOpen = true;
-        }
+        mainPopup.IsOpen = true;
     }
 
     void Window_Unloaded(object sender, RoutedEventArgs e)
@@ -63,7 +53,7 @@ public partial class MainWindow : Window
         if (_frameCapture && e.Key == Key.Space)
         {
             int count = 0;
-            foreach (var enc in _encoders)
+            foreach (var enc in _encoder)
             {
                 count++;
                 var filePath = $"capture_{count:D3}.png";
@@ -76,7 +66,7 @@ public partial class MainWindow : Window
                 }
                 catch (Exception) { }
             }
-            _encoders.Clear();
+            _encoder.Clear();
         }
         else if (e.Key != Key.PrintScreen)
         {
@@ -101,7 +91,6 @@ public partial class MainWindow : Window
         Debug.WriteLine($"[INFO] Popup close event.");
     }
    
-
     void mainPopup_Opened(object sender, EventArgs e)
     {
         if (_popTimer == null)
@@ -120,7 +109,6 @@ public partial class MainWindow : Window
 
     void popTimer_Tick(object? sender, EventArgs e)
     {
-        Debug.WriteLine($"[INFO] Firing popup timer event.");
         mainPopup.IsOpen = false;
         _popTimer?.Stop();
     }
@@ -130,7 +118,7 @@ public partial class MainWindow : Window
         SaveElementAsPng(hostBorder);
     }
 
-    List<PngBitmapEncoder> _encoders = new List<PngBitmapEncoder>();
+    List<PngBitmapEncoder> _encoder = new List<PngBitmapEncoder>();
     void SaveElementAsPng(FrameworkElement element)
     {
         if (element == null) { return; }
@@ -141,7 +129,7 @@ public partial class MainWindow : Window
         rtb.Render(element);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(rtb));
-        _encoders.Add(encoder);
+        _encoder.Add(encoder);
     }
     #endregion
 }
