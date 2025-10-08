@@ -27,17 +27,10 @@ public partial class MainWindow : Window
     void Window_Loaded(object sender, RoutedEventArgs e)
     {
         this.Icon = "pack://application:,,,/Assets/AppIcon.png".ReturnImageSource();
-        if (_frameCapture && _captureTimer == null)
+        if (_frameCapture)
         {
             tbPopup.Text = "Press [SPACE] to save captured frames, press any other key to exit.";
-            // Remove old captures if they exist
-            var pngFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "cap*.png", SearchOption.TopDirectoryOnly);
-            foreach (var fn in pngFiles) { try { File.Delete(fn); } catch { } }
-            _captureTimer = new System.Windows.Threading.DispatcherTimer();
-            // Adjust this time based on the desired framerate for the GIF.
-            _captureTimer.Interval = TimeSpan.FromMilliseconds(100);
-            _captureTimer.Tick += captureTimer_Tick;
-            _captureTimer.Start();
+            RemovePreviousCaptures();
         }
         mainPopup.IsOpen = true;
     }
@@ -50,23 +43,42 @@ public partial class MainWindow : Window
 
     void Window_KeyUp(object sender, KeyEventArgs e)
     {
-        if (_frameCapture && e.Key == Key.Space)
+        if (e.Key == Key.Space)
         {
-            int count = 0;
-            foreach (var enc in _encoder)
+            if (_frameCapture)
             {
-                count++;
-                var filePath = $"capture_{count:D3}.png";
-                try
+                _captureTimer?.Stop();
+                _frameCapture = false;
+                int count = 0;
+                foreach (var enc in _encoder)
                 {
-                    using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                    count++;
+                    var filePath = $"capture_{count:D3}.png";
+                    try
                     {
-                        enc.Save(fs);
+                        using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                        {
+                            enc.Save(fs);
+                        }
                     }
+                    catch (Exception) { }
                 }
-                catch (Exception) { }
+                _encoder.Clear();
             }
-            _encoder.Clear();
+            else
+            {
+                RemovePreviousCaptures();
+                _frameCapture = true;
+                if (_captureTimer == null)
+                {
+                    _captureTimer = new System.Windows.Threading.DispatcherTimer();
+                    // Adjust this time based on the desired framerate for the GIF.
+                    _captureTimer.Interval = TimeSpan.FromMilliseconds(100);
+                    _captureTimer.Tick += captureTimer_Tick;
+                    _captureTimer.Start();
+                }
+                _captureTimer?.Start();
+            }
         }
         else if (e.Key != Key.PrintScreen)
         {
@@ -117,6 +129,7 @@ public partial class MainWindow : Window
     {
         SaveElementAsPng(hostBorder);
     }
+    #endregion
 
     List<PngBitmapEncoder> _encoder = new List<PngBitmapEncoder>();
     void SaveElementAsPng(FrameworkElement element)
@@ -131,5 +144,13 @@ public partial class MainWindow : Window
         encoder.Frames.Add(BitmapFrame.Create(rtb));
         _encoder.Add(encoder);
     }
-    #endregion
+
+    /// <summary>
+    /// Remove old capture images, if they exist.
+    /// </summary>
+    void RemovePreviousCaptures()
+    {
+        var pngFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "cap*.png", SearchOption.TopDirectoryOnly);
+        foreach (var fn in pngFiles) { try { File.Delete(fn); } catch { } }
+    }
 }

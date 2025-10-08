@@ -52,6 +52,7 @@ public enum SpinnerRenderShape
     Progress,  // for "progress bar" animation
     Splash,    // for raining with splash animation
     Fireworks, // for launch and explode animation
+    Sand,      // for grain pile animation
 }
 
 /// <summary>
@@ -146,6 +147,8 @@ public partial class Spinner : UserControl
             CreateSplashDots();
         else if (RenderShape == SpinnerRenderShape.Fireworks)
             CreateFireworkDots();
+        else if (RenderShape == SpinnerRenderShape.Sand)
+            InitializePile();
         else
             CreateDots();
 
@@ -265,6 +268,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnSplashRendering;
         else if (RenderShape == SpinnerRenderShape.Fireworks)
             CompositionTarget.Rendering += OnFireworkRendering;
+        else if (RenderShape == SpinnerRenderShape.Sand)
+            CompositionTarget.Rendering += OnSandRendering;
         else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -324,6 +329,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnSplashRendering;
         else if (RenderShape == SpinnerRenderShape.Fireworks)
             CompositionTarget.Rendering -= OnFireworkRendering;
+        else if (RenderShape == SpinnerRenderShape.Sand)
+            CompositionTarget.Rendering -= OnSandRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -4026,11 +4033,17 @@ public partial class Spinner : UserControl
         UpdateExplosionParticles();
     }
 
-    Brush? selected;
     void SpawnExplosion(double x, double y)
     {
         int count = FireworkParticleCount + Random.Shared.Next(FireworkParticleCount);
-        selected = Random.Shared.NextDouble() > 0.65 ? FireworkBrush1 : Random.Shared.NextDouble() > 0.49 ? FireworkBrush2 : FireworkBrush3;
+
+        Brush selected = Random.Shared.NextDouble() switch
+        {
+            > 0.65 => FireworkBrush1,
+            > 0.32 => FireworkBrush2,
+            _ => FireworkBrush3,
+        };
+
         for (int i = 0; i < count; i++)
         {
             double angle = Random.Shared.NextDouble() * Tau;
@@ -4123,6 +4136,402 @@ public partial class Spinner : UserControl
                 _splash.RemoveAt(i);
             }
         }
+    }
+
+
+
+    public Brush SandBrush { get; set; } = new SolidColorBrush(Color.FromRgb(165, 85, 21));
+
+    // Pile model
+    int _cols;             // number of columns across the control
+    double[] _pileHeights; // height in pixels per column
+    double _cellWidth;     // width of one column in pixels
+
+    // Collections
+    readonly List<Grain> _grains = new();
+
+    // Bounds cache
+    double _sandWidth = 0;
+    double _sandBottomY = 0;
+
+    // Pile shape
+    System.Windows.Shapes.Path _pilePath;
+
+    void InitializePile(int resolution = 100)
+    {
+        _sandWidth = ActualWidth;
+        _sandBottomY = ActualHeight;
+        _cols = Math.Max(10, resolution);
+        _cellWidth = _sandWidth / _cols;
+        _pileHeights = new double[_cols];
+        InitializePileVisual();
+    }
+
+    void InitializePileVisual()
+    {
+        if (_pilePath != null)
+            PART_Canvas.Children.Remove(_pilePath);
+
+        _pilePath = new System.Windows.Shapes.Path
+        {
+            Fill = SandBrush,
+            Stroke = Brushes.SaddleBrown,
+            StrokeThickness = 0 // Don’t stroke the bottom edge
+        };
+        PART_Canvas.Children.Add(_pilePath);
+    }
+
+
+
+    double _airDrag = 0.99;       // slight damping on VX/VY for stability
+    public double SandJitter { get; set; } = 8.0;           // horizontal jitter at spawn (px)
+    public double SandGravity { get; set; } = 24;           // falling velocity
+    public double SandSlope { get; set; } = 3.0;            // angle of repose in pixels per column
+    public double SandSlopeMax { get; set; } = 5.0;         // for dynamic mode only
+    public double SandSlopeMin { get; set; } = 0.2;         // for dynamic mode only
+    public double SandResetPercentage { get; set; } = 70.0; // pile height percentage
+    public bool SandDynamicSlope { get; set; } = false;
+    public bool SandAspectSlope { get; set; } = true;
+
+    void SpawnCenterGrains(int count)
+    {
+        double xCenter = _sandWidth / 2.0;
+        for (int i = 0; i < count; i++)
+        {
+            double size = 2.0 + Random.Shared.NextDouble() * 2.0;
+            double y = 0; // y = -size; // start slightly above view
+            double x = 0;
+            if (SandJitter.IsZeroOrLess())
+                x = xCenter + (Random.Shared.NextDouble() * 2 - 1) * GetCurrentJitter(); // auto-jitter
+            else
+                x = xCenter + (Random.Shared.NextDouble() * 2 - 1) * SandJitter;
+
+            var dot = new Ellipse
+            {
+                Width = DotSize,
+                Height = DotSize,
+                Fill = SandBrush,
+                Opacity = 1.0
+            };
+
+            Canvas.SetLeft(dot, x - DotSize / 2.0);
+            Canvas.SetTop(dot, y - DotSize / 2.0);
+            PART_Canvas.Children.Add(dot);
+
+            _grains.Add(new Grain
+            {
+                Dot = dot,
+                X = x,
+                Y = y,
+                VX = (Random.Shared.NextDouble() * 2 - 1) * 0.25, // tiny sideways drift
+                VY = 0.0,
+                Size = DotSize
+            });
+        }
+    }
+
+    void OnSandRendering(object? sender, EventArgs e)
+    {
+        if (_pileHeights == null || _pileHeights.Length == 0)
+        {
+            InitializePile();
+            return;
+        }
+
+        // Spawn a few new grains each frame
+        SpawnCenterGrains((int)DotCount);
+
+        // Update falling grains
+        for (int i = _grains.Count - 1; i >= 0; i--)
+        {
+            var g = _grains[i];
+
+            // Integrate velocities
+            g.VY += (SandGravity / 100.0);
+            g.VX *= _airDrag; g.VY *= _airDrag;
+            g.X += g.VX; g.Y += g.VY;
+
+            // Constrain inside control horizontally
+            if (g.X < 0) { g.X = 0; g.VX = 0; }
+            if (g.X > _sandWidth) { g.X = _sandWidth; g.VX = 0; }
+
+            // Compute pile surface at grain's X
+            int col = SandColumnIndex(g.X);
+            double surfaceY = _sandBottomY - _pileHeights[col];
+
+            // Settle when the grain reaches the surface
+            if (g.Y + g.Size / 2 >= surfaceY)
+            {
+                if (SandAspectSlope) // Raise pile height (biased ⇨ aspect ratio)
+                    SettleGrainAspect(col, g.Size);
+                else // Raise pile height (standard slope calc)
+                    SettleGrain(col, g.Size);
+                PART_Canvas.Children.Remove(g.Dot);
+                // Lock grain (remove from falling)
+                _grains.RemoveAt(i);
+                continue;
+            }
+
+            // Update visual for falling grain
+            Canvas.SetLeft(g.Dot, g.X - g.Size / 2);
+            Canvas.SetTop(g.Dot, g.Y - g.Size / 2);
+
+            // Remove if somehow goes below floor (safety)
+            if (g.Y > _sandBottomY + DotSize)
+            {
+                PART_Canvas.Children.Remove(g.Dot);
+                _grains.RemoveAt(i);
+            }
+        }
+
+        // Relax pile to angle of repose
+        RelaxPile(1);
+
+        // Redraw pile as smooth shape path
+        RedrawPile();
+
+        if (_maxSandHeight > _sandBottomY * (SandResetPercentage / 100.0))
+            ResetSandSimulation();
+    }
+
+    void SettleGrain(int col, double size)
+    {
+        int current = col;
+        bool moved = false;
+
+        // dynamic changing slope
+        if (SandDynamicSlope)
+            SandSlope = GetCurrentMaxSlope();
+
+        do
+        {
+            moved = false;
+            int left = current - 1;
+            int right = current + 1;
+            if (left >= 0 && _pileHeights[current] - _pileHeights[left] > SandSlope)
+            {
+                current = left;
+                moved = true;
+            }
+            else if (right < _cols && _pileHeights[current] - _pileHeights[right] > SandSlope)
+            {
+                current = right;
+                moved = true;
+            }
+        } while (moved);
+
+        _pileHeights[current] += size;
+    }
+
+    /// <summary>
+    /// 1.0 = neutral, >1 = stronger outward push
+    /// Narrow glass (aspect < 1) ⇨ stronger bias
+    /// </summary>
+    double GetSpreadBias()
+    {
+        // width vs height ratio
+        double aspect = _sandWidth / _sandBottomY;
+        return aspect < 1 ? 1.0 + (1.0 - aspect) * 1.5 : 1.0;
+    }
+
+    void SettleGrainAspect(int col, double size)
+    {
+        int current = col;
+        bool moved = false;
+        double slope = GetCurrentMaxSlope();
+        double bias = GetSpreadBias();
+        do
+        {
+            moved = false;
+            int left = current - 1;
+            int right = current + 1;
+
+            double diffL = (left >= 0) ? _pileHeights[current] - _pileHeights[left] : 0;
+            double diffR = (right < _cols) ? _pileHeights[current] - _pileHeights[right] : 0;
+
+            if (diffL > slope && diffR > slope)
+            {
+                // Both sides possible ⇨ bias outward
+                if (Random.Shared.NextDouble() < 0.5 * bias)
+                    current = left >= 0 ? left : current;
+                else
+                    current = right < _cols ? right : current;
+
+                moved = true;
+            }
+            else if (diffL > slope)
+            {
+                current = left;
+                moved = true;
+            }
+            else if (diffR > slope)
+            {
+                current = right;
+                moved = true;
+            }
+        } while (moved);
+
+        _pileHeights[current] += size;
+    }
+
+
+    double _maxSandHeight = 0.0; // for tracking max height
+    void RelaxPile(int relaxIterations)
+    {
+        for (int pass = 0; pass < relaxIterations; pass++)
+        {
+            for (int c = 0; c < _cols - 1; c++)
+            {
+                // Keep track of how high we are
+                if (_pileHeights[c] > _maxSandHeight)
+                    _maxSandHeight = _pileHeights[c];
+
+                double diff = _pileHeights[c] - _pileHeights[c + 1];
+                if (diff > SandSlope)
+                {
+                    double spill = (diff - SandSlope) * 0.5;
+                    _pileHeights[c] -= spill;
+                    _pileHeights[c + 1] += spill;
+                }
+                else if (diff < -SandSlope)
+                {
+                    double spill = (-diff - SandSlope) * 0.5;
+                    _pileHeights[c] += spill;
+                    _pileHeights[c + 1] -= spill;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Beziers for the <see cref="System.Windows.Shapes.Path"/> <see cref="_pilePath"/>.<br/>
+    /// This is much more efficient then resting thousands of ellipses on the floor.<br/>
+    /// </summary>
+    void RedrawPile()
+    {
+        if (_pileHeights == null || _pileHeights.Length == 0)
+            return;
+
+        var geo = new StreamGeometry();
+
+        using (var ctx = geo.Open())
+        {
+            ctx.BeginFigure(new Point(0, _sandBottomY), isFilled: true, isClosed: true);
+
+            double x0 = 0;
+            double y0 = _sandBottomY - _pileHeights[0];
+            ctx.LineTo(new Point(x0, y0), true, false);
+
+            for (int c = 1; c < _cols - 1; c++)
+            {
+                double x1 = c * _cellWidth;
+                double y1 = _sandBottomY - _pileHeights[c];
+                double x2 = (c + 1) * _cellWidth;
+                double y2 = _sandBottomY - _pileHeights[c + 1];
+                double mx = (x1 + x2) / 2;
+                double my = (y1 + y2) / 2;
+                ctx.QuadraticBezierTo(new Point(x1, y1), new Point(mx, my), true, true);
+            }
+
+            double xLast = (_cols - 1) * _cellWidth;
+            double yLast = _sandBottomY - _pileHeights[_cols - 1];
+            ctx.LineTo(new Point(xLast, yLast), true, true);
+
+            // The path will "walk up the side" without the extra LineTo
+            ctx.LineTo(new Point(_sandWidth, _sandBottomY), true, false);
+        }
+
+        geo.Freeze();
+        _pilePath.Data = geo;
+    }
+
+    /// <summary>
+    /// Calculate target slope range (pixels per column)
+    /// </summary>
+    double GetCurrentMaxSlope()
+    {
+        if (SandSlopeMin > SandSlopeMax)
+            SandSlopeMax = SandSlopeMin;
+
+        // Measure current pile height
+        double maxH = 0;
+        for (int c = 0; c < _cols; c++)
+        {
+            if (_pileHeights[c] > maxH)
+                maxH = _pileHeights[c];
+        }
+
+        // Reference height at which slope reaches near-low
+        double refH = _sandBottomY * (SandResetPercentage / 100.0);
+        if (refH <= 0)
+            return SandSlopeMax;
+
+        // Normalize height 0..1
+        double t = Math.Max(0, Math.Min(1, maxH / refH));
+
+        // Ease-out to reduce slope smoothly
+        double eased = 1.0 - Math.Pow(t, 0.5);
+
+        // Lerp from high ⇨ low
+        return SandSlopeMin + (SandSlopeMax - SandSlopeMin) * eased;
+
+        #region [Alternate]
+        // Base slope range
+        double baseSlope = SandSlopeMin + (SandSlopeMax - SandSlopeMin) * eased;
+
+        // Scale slope by width: narrower control → flatter slope
+        double widthFactor = 0;
+        if (_sandWidth == _sandBottomY)
+            widthFactor = _sandWidth / 1000.0; // 400px is a "reference width"
+        else
+            widthFactor = _sandWidth / _sandBottomY;
+        widthFactor = Clamp(widthFactor, 0.1, 1.0);
+
+        return baseSlope * widthFactor;
+        #endregion
+    }
+
+    int SandColumnIndex(double x)
+    {
+        int idx = (int)(x / _cellWidth);
+        if (idx < 0) { idx = 0; }
+        if (idx >= _cols) { idx = _cols - 1; }
+        return idx;
+    }
+
+    double GetCurrentJitter()
+    {
+        // Measure current pile height
+        double maxH = 0;
+        for (int c = 0; c < _cols; c++)
+            if (_pileHeights[c] > maxH) maxH = _pileHeights[c];
+
+        // Normalize 0..1 relative to control height
+        double t = Math.Clamp(maxH / _sandBottomY, 0, 1);
+
+        // Start small, grow larger as pile rises
+        double minJitter = 3.0;
+        double maxJitter = _sandWidth * 0.3; // up to 30% of width
+        return minJitter + (maxJitter - minJitter) * t;
+    }
+
+    void ResetSandSimulation()
+    {
+        _maxSandHeight = 0;
+
+        // Clear falling grains
+        foreach (var g in _grains)
+            PART_Canvas.Children.Remove(g.Dot);
+
+        _grains.Clear();
+
+        // Reset pile heights
+        if (_pileHeights != null)
+            Array.Clear(_pileHeights, 0, _pileHeights.Length);
+
+        // Clear pile path
+        if (_pilePath != null)
+            _pilePath.Data = null;
     }
     #endregion
 
@@ -4570,6 +4979,14 @@ public partial class Spinner : UserControl
 }
 
 #region [Support Classes]
+public class Grain
+{
+    public Ellipse Dot;
+    public double X, Y;
+    public double VX, VY;
+    public double Size;
+}
+
 public class FireworkDot
 {
     public Ellipse Dot;

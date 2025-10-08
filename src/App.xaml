@@ -90,33 +90,50 @@
                     <GradientStop Offset="1.0" Color="#242424" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
+            <RadialGradientBrush x:Key="FireworkBrushRadial1" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.6" Color="Yellow" />
+                    <GradientStop Offset="1.0" Color="DeepSkyBlue" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <RadialGradientBrush x:Key="FireworkBrushRadial2" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.6" Color="HotPink" />
+                    <GradientStop Offset="1.0" Color="DeepSkyBlue" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <RadialGradientBrush x:Key="FireworkBrushRadial3" GradientOrigin="0.75,0.25">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.6" Color="SpringGreen" />
+                    <GradientStop Offset="1.0" Color="DeepSkyBlue" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <RadialGradientBrush x:Key="SandBrushRadial" GradientOrigin="0.65,0.35">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="#F7AC80" />
+                    <GradientStop Offset="0.7" Color="#C4570F" />
+                    <GradientStop Offset="1.0" Color="#683619" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
+            <LinearGradientBrush x:Key="SandBrushLinear" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#F7AC80" />
+                        <GradientStop Offset="0.5" Color="#C4570F" />
+                        <GradientStop Offset="0.8" Color="#874621" />
+                        <GradientStop Offset="1.0" Color="#442311" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
             <RadialGradientBrush x:Key="MeteorBrushRadial" GradientOrigin="0.75,0.25">
                 <RadialGradientBrush.GradientStops>
                     <GradientStop Offset="0.0" Color="White" />
                     <GradientStop Offset="0.6" Color="Yellow" />
                     <GradientStop Offset="0.8" Color="OrangeRed" />
                     <GradientStop Offset="1.0" Color="#202020" />
-                </RadialGradientBrush.GradientStops>
-            </RadialGradientBrush>
-            <RadialGradientBrush x:Key="FireworkBrushRadial1" GradientOrigin="0.75,0.25">
-                <RadialGradientBrush.GradientStops>
-                    <GradientStop Offset="0.0" Color="White" />
-                    <GradientStop Offset="0.5" Color="Yellow" />
-                    <GradientStop Offset="1.0" Color="OrangeRed" />
-                </RadialGradientBrush.GradientStops>
-            </RadialGradientBrush>
-            <RadialGradientBrush x:Key="FireworkBrushRadial2" GradientOrigin="0.75,0.25">
-                <RadialGradientBrush.GradientStops>
-                    <GradientStop Offset="0.0" Color="White" />
-                    <GradientStop Offset="0.5" Color="Red" />
-                    <GradientStop Offset="1.0" Color="OrangeRed" />
-                </RadialGradientBrush.GradientStops>
-            </RadialGradientBrush>
-            <RadialGradientBrush x:Key="FireworkBrushRadial3" GradientOrigin="0.75,0.25">
-                <RadialGradientBrush.GradientStops>
-                    <GradientStop Offset="0.0" Color="White" />
-                    <GradientStop Offset="0.5" Color="Yellow" />
-                    <GradientStop Offset="1.0" Color="SpringGreen" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
             <RadialGradientBrush x:Key="GeneralBrushRadial" GradientOrigin="0.75,0.25">

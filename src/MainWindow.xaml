@@ -311,7 +311,7 @@
             <!--  Twinkle  -->
             <ctrl:Spinner
                 Grid.Row="2"
-                Grid.Column="4"
+                Grid.Column="2"
                 Width="100"
                 Height="100"
                 Margin="-2"
@@ -326,11 +326,11 @@
                 RenderShape="Twinkle1"
                 TwinkleSpeed="8" />
 
-            <!--  Bounce  -->
+            <!--  Sand  -->
             <ctrl:Spinner
                 Grid.Row="2"
                 Grid.RowSpan="1"
-                Grid.Column="2"
+                Grid.Column="4"
                 Width="100"
                 Height="100"
                 Margin="1"
@@ -338,14 +338,19 @@
                 VerticalAlignment="Stretch"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                BounceCollisions="False"
-                BounceLowOpacity="False"
-                BounceSpeed="80"
                 DotBrush="{StaticResource SnowBrushRadial}"
-                DotCount="30"
-                DotSize="12"
+                DotCount="6"
+                DotSize="3"
                 RenderMode="AnimatePositions"
-                RenderShape="Bounce" />
+                RenderShape="Sand"
+                SandBrush="{StaticResource SandBrushLinear}"
+                SandDynamicSlope="False"
+                SandGravity="25"
+                SandJitter="0"
+                SandResetPercentage="80"
+                SandSlope="0.1"
+                SandSlopeMax="10.0"
+                SandSlopeMin="0.1" />
 
             <!--  Bounce (collision detection)  -->
             <ctrl:Spinner
@@ -361,7 +366,7 @@
                 BorderThickness="1"
                 BounceCollisions="True"
                 BounceLowOpacity="False"
-                BounceSpeed="20"
+                BounceSpeed="25"
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="14"
                 DotSize="12"
@@ -460,15 +465,15 @@
                 VerticalAlignment="Stretch"
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
-                DotBrush="{StaticResource BlipBrushRadial}"
+                DotBrush="{StaticResource ProgressBrushRadial}"
                 DotCount="3"
                 DotSize="6"
-                FireworkBaseSpeed="3"
+                FireworkBaseSpeed="2.5"
                 FireworkBrush1="{StaticResource FireworkBrushRadial1}"
                 FireworkBrush2="{StaticResource FireworkBrushRadial2}"
                 FireworkBrush3="{StaticResource FireworkBrushRadial3}"
                 FireworkExplosionSpeed="1"
-                FireworkGravity="1.5"
+                FireworkGravity="1.4"
                 FireworkLifetime="30"
                 FireworkParticleCount="5"
                 RenderMode="AnimatePositions"
