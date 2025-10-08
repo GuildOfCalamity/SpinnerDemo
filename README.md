@@ -61,6 +61,7 @@ public enum SpinnerRenderShape
     Progress,   // for "progress bar" animation
     Splash,     // for raining with splash animation
     Fireworks,  // for launch and explode animation
+    Sand,       // for grain pile animation
 }
 ```
 
