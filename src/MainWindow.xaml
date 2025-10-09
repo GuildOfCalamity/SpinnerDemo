@@ -169,7 +169,7 @@
                 RingsCount="2"
                 RingsOutward="True" />
 
-            <!--  Space  -->
+            <!--  Gears/Cogs  -->
             <ctrl:Spinner
                 Grid.Row="1"
                 Grid.Column="2"
@@ -186,8 +186,11 @@
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="20"
                 DotSize="6"
+                GearCoreBrush="{StaticResource GearBrushRadial}"
+                GearInnerSpacing="2"
+                GearOutlineThickness="1"
                 RenderMode="AnimatePositions"
-                RenderShape="Space"
+                RenderShape="Gears"
                 RingsAlternateOpacity="True"
                 RingsAngleSpeed="1"
                 RingsCount="3"

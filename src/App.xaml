@@ -90,6 +90,14 @@
                     <GradientStop Offset="1.0" Color="#242424" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
+            <RadialGradientBrush x:Key="GearBrushRadial" GradientOrigin="0.5,0.5">
+                <RadialGradientBrush.GradientStops>
+                    <GradientStop Offset="0.0" Color="White" />
+                    <GradientStop Offset="0.3" Color="#545454" />
+                    <GradientStop Offset="0.6" Color="#C0D0F0" />
+                    <GradientStop Offset="1.0" Color="#242424" />
+                </RadialGradientBrush.GradientStops>
+            </RadialGradientBrush>
             <RadialGradientBrush x:Key="FireworkBrushRadial1" GradientOrigin="0.75,0.25">
                 <RadialGradientBrush.GradientStops>
                     <GradientStop Offset="0.0" Color="White" />

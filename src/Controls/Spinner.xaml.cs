@@ -4873,7 +4873,7 @@ public partial class Spinner : UserControl
     /// </summary>
     void CreateSpinGears(double seconds = 5.0)
     {
-        double cx = ActualWidth / 2.5;
+        double cx = ActualWidth / 3.5;
         double cy = ActualHeight / 2.0;
 
         // Define relative radii (like percentages of control size)
