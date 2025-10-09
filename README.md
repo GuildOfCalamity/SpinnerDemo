@@ -62,6 +62,7 @@ public enum SpinnerRenderShape
     Splash,     // for raining with splash animation
     Fireworks,  // for launch and explode animation
     Sand,       // for grain pile animation
+    Gears,      // for double gear animation
 }
 ```
 
