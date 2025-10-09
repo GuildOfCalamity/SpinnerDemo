@@ -12,8 +12,8 @@
 - A [WPF](https://learn.microsoft.com/en-us/dotnet/desktop/wpf) application that demostrates my home-brew `Spinner` control.
 - Visibility determines if animation runs, so this can be bound to view model properties, e.g. `IsBusy`/`IsNotBusy`.
 - If mode is set to `SpinnerRenderMode.RotateCanvas` then some of the more advanced animations will not render correctly, it's recommended to keep the mode set to `SpinnerRenderMode.AnimatePositions` which employs the `CompositionTarget.Rendering` surface event (this also avoids rotating any brush gradients, which can cause a wobble effect).
-- Most render methods have their own data elements, however some are shared, e.g. the **Snow/Wind/Space** modes all use the `_rain` arrays.
-- Many of these modes/shapes could be used as a screen saver if you desire, e.g. the `Meteor1` and `Meteor2` mode are entertaining to watch in a maximized transparency window.
+- Most render methods have their own data elements, however some are shared, e.g. the `Snow`/`Wind`/`Space` modes all use the `_rain` arrays.
+- Many of these modes/shapes could be used as a screen saver if you desire, e.g. the `Meteor1`, `Meteor2` and `Fireworks` modes are entertaining to watch in a maximized transparency window.
 - If you're looking for a basic/classic spinner, then the `Dots` and `Chase` modes are probably what you want.
 - Each mode is accompanied by appropriate configuration settings, e.g. the `Fountain` mode offers the following:
     - `FountainBaseLife`
@@ -30,7 +30,7 @@
 
 ## Spinner Control
 
-- The re-usable spiner control has many modes for rendering shapes:
+- The re-usable control has many modes for rendering:
 
 ```
 public enum SpinnerRenderShape
