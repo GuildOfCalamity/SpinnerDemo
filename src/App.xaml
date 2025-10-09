@@ -100,7 +100,7 @@
             <RadialGradientBrush x:Key="FireworkBrushRadial2" GradientOrigin="0.75,0.25">
                 <RadialGradientBrush.GradientStops>
                     <GradientStop Offset="0.0" Color="White" />
-                    <GradientStop Offset="0.6" Color="HotPink" />
+                    <GradientStop Offset="0.6" Color="Red" />
                     <GradientStop Offset="1.0" Color="DeepSkyBlue" />
                 </RadialGradientBrush.GradientStops>
             </RadialGradientBrush>
@@ -172,6 +172,16 @@
                     <GradientStopCollection>
                         <GradientStop Offset="0.0" Color="#000528" />
                         <GradientStop Offset="1.0" Color="#000" />
+                    </GradientStopCollection>
+                </GradientBrush.GradientStops>
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="OceanBrushLinear" StartPoint="0,0" EndPoint="0,1">
+                <GradientBrush.GradientStops>
+                    <GradientStopCollection>
+                        <GradientStop Offset="0.0" Color="#D8FFFFFF" />
+                        <GradientStop Offset="0.2" Color="#D887CEEB" />
+                        <GradientStop Offset="0.7" Color="#D81E90FF" />
+                        <GradientStop Offset="1.0" Color="#D8101080" />
                     </GradientStopCollection>
                 </GradientBrush.GradientStops>
             </LinearGradientBrush>

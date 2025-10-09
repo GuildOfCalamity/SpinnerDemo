@@ -53,6 +53,8 @@ public enum SpinnerRenderShape
     Splash,    // for raining with splash animation
     Fireworks, // for launch and explode animation
     Sand,      // for grain pile animation
+    Ocean,     // for ocean surface animation
+    Gears,     // for double gear animation
 }
 
 /// <summary>
@@ -149,10 +151,14 @@ public partial class Spinner : UserControl
             CreateFireworkDots();
         else if (RenderShape == SpinnerRenderShape.Sand)
             InitializePile();
+        else if (RenderShape == SpinnerRenderShape.Ocean)
+            InitializeWave();
+        else if (RenderShape == SpinnerRenderShape.Gears)
+            CreateSpinGears();
         else
             CreateDots();
 
-        if (IsVisible)
+        if (IsVisible && RenderShape != SpinnerRenderShape.Gears)
         {
             if (RenderMode == SpinnerRenderMode.RotateCanvas)
                 StartAnimationStandard();
@@ -166,17 +172,31 @@ public partial class Spinner : UserControl
         RunFade(IsVisible);
         if (IsVisible)
         {
-            if (RenderMode == SpinnerRenderMode.RotateCanvas)
-                StartAnimationStandard();
+            if (RenderShape != SpinnerRenderShape.Gears)
+            {
+                if (RenderMode == SpinnerRenderMode.RotateCanvas)
+                    StartAnimationStandard();
+                else
+                    StartAnimationCompositionTarget();
+            }
             else
-                StartAnimationCompositionTarget();
+            {
+                gearStory?.Begin(this);
+            }
         }
         else
         {
-            if (RenderMode == SpinnerRenderMode.RotateCanvas)
-                StopAnimationStandard();
+            if (RenderShape != SpinnerRenderShape.Gears)
+            {
+                if (RenderMode == SpinnerRenderMode.RotateCanvas)
+                    StopAnimationStandard();
+                else
+                    StopAnimationCompositionTarget();
+            }
             else
-                StopAnimationCompositionTarget();
+            {
+                gearStory?.Stop(this);
+            }
         }
     }
     #endregion
@@ -270,6 +290,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering += OnFireworkRendering;
         else if (RenderShape == SpinnerRenderShape.Sand)
             CompositionTarget.Rendering += OnSandRendering;
+        else if (RenderShape == SpinnerRenderShape.Ocean)
+            CompositionTarget.Rendering += OnWaveRendering;
         else // default is basic spinner circle
             CompositionTarget.Rendering += OnCircleRendering;
     }
@@ -331,6 +353,8 @@ public partial class Spinner : UserControl
             CompositionTarget.Rendering -= OnFireworkRendering;
         else if (RenderShape == SpinnerRenderShape.Sand)
             CompositionTarget.Rendering -= OnSandRendering;
+        else if (RenderShape == SpinnerRenderShape.Ocean)
+            CompositionTarget.Rendering -= OnWaveRendering;
         else
             CompositionTarget.Rendering -= OnCircleRendering;
     }
@@ -390,11 +414,14 @@ public partial class Spinner : UserControl
         }
     }
 
+    public string PolyName { get; set; } = "triangle";
+    public bool PolyPointOutward { get; set; } = true;
+
     /// <summary>
     /// Create path geometry instead of a standard <see cref="Ellipse"/>.
     /// </summary>
     /// <param name="pointOutward"></param>
-    void CreatePolys(bool pointOutward = true)
+    void CreatePolys()
     {
         if (PART_Canvas == null)
             return;
@@ -410,19 +437,107 @@ public partial class Spinner : UserControl
             double x = radius * Math.Cos(rad) + ActualWidth / 2 - DotSize / 2;
             double y = radius * Math.Sin(rad) + ActualHeight / 2 - DotSize / 2;
 
-            var triangle = Geometry.Parse("M 0,0 L 6,0 3,6 Z");
-            var equilateral = Geometry.Parse("M 0,1 L 0.5,0 1,1 Z");
-            var diamond = Geometry.Parse("M 0.5,0 L 1,0.5 0.5,1 0,0.5 Z");
-            var star = Geometry.Parse("M 0.5,0 L 0.61,0.35 1,0.35 0.68,0.57 0.81,0.91 0.5,0.7 0.19,0.91 0.32,0.57 0,0.35 0.39,0.35 Z");
-            var circle = Geometry.Parse("M 0,0.5 A 0.5,0.5 0 1 0 1,0.5 A 0.5,0.5 0 1 0 0,0.5");
-            var tick = Geometry.Parse("M 0,0 L 0,1");
-            var chevronRight = Geometry.Parse("M 0,0 L 0.6,0.5 L 0,1 L 0.2,1 L 0.8,0.5 L 0.2,0 Z");
-            var chevronLeft = Geometry.Parse("M 1,0 L 0.4,0.5 L 1,1 L 0.8,1 L 0.2,0.5 L 0.8,0 Z");
-            var chevronUp = Geometry.Parse("M 0,1 L 0.5,0.4 L 1,1 L 1,0.8 L 0.5,0.2 L 0,0.8 Z");
-            var chevronDown = Geometry.Parse("M 0,0 L 0.5,0.6 L 1,0 L 1,0.2 L 0.5,0.8 L 0,0.2 Z");
+            Geometry? poly;
+            switch (PolyName.ToLower())
+            {
+                case "spike": poly = Geometry.Parse("M 10,30 C 10,15 0,15 0,7 C 0,0 10,0 10,7 C 10,0 20,0 20,7 C 20,15 10,15 10,30 Z");
+                    break;
+                case "triangle": poly = Geometry.Parse("M 0,0 L 6,0 3,6 Z");
+                    break;
+                case "equilateral": poly = Geometry.Parse("M 0,1 L 0.5,0 1,1 Z");
+                    break;
+                case "square":
+                case "rectangle": poly = Geometry.Parse("M 0,0 L 10,0 10,6 0,6 Z");
+                    break;
+                case "diamond": poly = Geometry.Parse("M 0.5,0 L 1,0.5 0.5,1 0,0.5 Z");
+                    break;
+                case "pentagon": poly = Geometry.Parse("M 5,0 L 10,4 8,10 2,10 0,4 Z");
+                    break;
+                case "hexagon": poly = Geometry.Parse("M 5,0 L 15,0 20,10 15,20 5,20 0,10 Z");
+                    break;
+                case "octagon": poly = Geometry.Parse("M 6,0 L 14,0 20,6 20,14 14,20 6,20 0,14 0,6 Z");
+                    break;
+                case "star": poly = Geometry.Parse("M 0.5,0 L 0.61,0.35 1,0.35 0.68,0.57 0.81,0.91 0.5,0.7 0.19,0.91 0.32,0.57 0,0.35 0.39,0.35 Z");
+                    break;
+                case "star2": poly = Geometry.Parse("M 5,0 L 6,3 10,3 7,5 8,9 5,7 2,9 3,5 0,3 4,3 Z");
+                    break;
+                case "circle": poly = Geometry.Parse("M 0,0.5 A 0.5,0.5 0 1 0 1,0.5 A 0.5,0.5 0 1 0 0,0.5");
+                    break;
+                case "circle2": poly = Geometry.Parse("M 5,0 A 5,5 0 1 1 4.999,0 Z");
+                    break;
+                case "semicircle": poly = Geometry.Parse("M 0,0 A 10,10 0 0 1 20,0 L 0,0 Z");
+                    break;
+                case "quartercircle": poly = Geometry.Parse("M 0,0 A 10,10 0 0 1 10,10 L 0,10 Z");
+                    break;
+                case "ellipse": poly = Geometry.Parse("M 8,0 A 8,5 0 1 1 7.999,0 Z");
+                    break;
+                case "tick": poly = Geometry.Parse("M 0,0 L 0,1");
+                    break;
+                case "pill": poly = Geometry.Parse("M 10,20 C 5,20 0,15 0,10 C 0,5 5,0 10,0 C 12,0 14,1 15,2 C 16,0 18,0 20,0 C 25,0 30,5 30,10 C 30,15 25,20 20,20 Z");
+                    break;
+                case "horseshoe": poly = Geometry.Parse("M 20,10 A 10,10 0 1 1 0,10 A 7,10 0 1 0 20,10 Z");
+                    break;
+                case "playbutton": poly = Geometry.Parse("M 0,0 L 12,6 0,12 Z");
+                    break;
+                case "pausebutton": poly = Geometry.Parse("M 0,0 L 4,0 4,12 0,12 Z M 8,0 L 12,0 12,12 8,12 Z");
+                    break;
+                case "stopbutton": poly = Geometry.Parse("M 0,0 L 12,0 12,12 0,12 Z");
+                    break;
+                case "forwardbutton": poly = Geometry.Parse("M 0,0 L 6,6 0,12 Z M 6,0 L 12,6 6,12 Z");
+                    break;
+                case "backbutton": poly = Geometry.Parse("M 12,0 L 6,6 12,12 Z M 6,0 L 0,6 6,12 Z");
+                    break;
+                case "plus": poly = Geometry.Parse("M 4,0 L 8,0 8,4 12,4 12,8 8,8 8,12 4,12 4,8 0,8 0,4 4,4 Z");
+                    break;
+                case "minus": poly = Geometry.Parse("M 0,4 L 12,4 12,8 0,8 Z");
+                    break;
+                case "chevronright": poly = Geometry.Parse("M 0,0 L 0.6,0.5 L 0,1 L 0.2,1 L 0.8,0.5 L 0.2,0 Z");
+                    break;
+                case "chevronleft": poly = Geometry.Parse("M 1,0 L 0.4,0.5 L 1,1 L 0.8,1 L 0.2,0.5 L 0.8,0 Z");
+                    break;
+                case "chevronup": poly = Geometry.Parse("M 0,1 L 0.5,0.4 L 1,1 L 1,0.8 L 0.5,0.2 L 0,0.8 Z");
+                    break;
+                case "chevrondown": poly = Geometry.Parse("M 0,0 L 0.5,0.6 L 1,0 L 1,0.2 L 0.5,0.8 L 0,0.2 Z");
+                    break;
+                case "arrowright": poly = Geometry.Parse("M 0,0 L 12,0 12,4 20,8 12,12 12,16 0,16 Z");
+                    break;
+                case "arrowleft": poly = Geometry.Parse("M 20,0 L 8,0 8,4 0,8 8,12 8,16 20,16 Z");
+                    break;
+                case "arrowup": poly = Geometry.Parse("M 0,12 L 8,0 16,12 12,12 12,20 4,20 4,12 Z");
+                    break;
+                case "arrowdown": poly = Geometry.Parse("M 0,0 L 16,0 16,8 20,8 8,20 -4,8 0,8 Z");
+                    break;
+                case "home": poly = Geometry.Parse("M 0,8 L 8,0 16,8 16,16 0,16 Z M 6,16 L 6,10 10,10 10,16 Z");
+                    break;
+                case "folder": poly = Geometry.Parse("M 0,4 L 6,4 8,0 16,0 16,12 0,12 Z");
+                    break;
+                case "menu": poly = Geometry.Parse("M 0,0 L 16,0 M 0,6 L 16,6 M 0,12 L 16,12");
+                    break;
+                case "power": poly = Geometry.Parse("M 6,0 L 6,6 M 2,2 A 6,6 0 1 1 10,2");
+                    break;
+                case "document": poly = Geometry.Parse("M 0,0 L 8,0 12,4 12,16 0,16 Z");
+                    break;
+                case "clipboard": poly = Geometry.Parse("M 4,0 L 8,0 8,2 12,2 12,16 0,16 0,2 4,2 Z");
+                    break;
+                case "trash": poly = Geometry.Parse("M 2,4 L 14,4 12,16 4,16 Z M 5,4 L 5,14 M 9,4 L 9,14");
+                    break;
+                case "location": poly = Geometry.Parse("M 6,0 A 6,6 0 1 1 5.999,0 Z M 6,12 L 6,20");
+                    break;
+                case "bell": poly = Geometry.Parse("M 6,0 C 2,0 2,6 2,10 L 2,14 10,14 10,10 C 10,6 10,0 6,0 Z M 4,16 A 2,2 0 1 0 8,16");
+                    break;
+                case "gear": poly = CreateGearGeometry();
+                    break;
+                case "sun": poly = Geometry.Parse("M 6,0 L 6,2 M 6,10 L 6,12 M 0,6 L 2,6 M 10,6 L 12,6 M 2,2 L 3,3 M 9,9 L 10,10 M 2,10 L 3,9 M 9,3 L 10,2 M 6,4 A 2,2 0 1 1 5.999,4 Z");
+                    break;
+                case "info": poly = Geometry.Parse("M 6,2 A 2,2 0 1 1 5.999,2 Z M 6,6 L 6,14");
+                    break;
+                default: // triangle
+                    poly = Geometry.Parse("M 0,0 L 6,0 3,6 Z");
+                    break;
+            }
             var path = new System.Windows.Shapes.Path
             {
-                Data = triangle,
+                Data = poly,
                 Fill = DotBrush,
                 Width = DotSize,
                 Stroke = DotBrush, // new SolidColorBrush(Colors.White),
@@ -432,7 +547,7 @@ public partial class Spinner : UserControl
                 Opacity = (double)i / (double)DotCount + 0.01 // fade each consecutive shape
             };
 
-            if (pointOutward)
+            if (PolyPointOutward)
             {   // Keep the shape’s orientation consistent around the circle
                 path.RenderTransform = new RotateTransform(angle + 90, DotSize / 2, DotSize / 2);
             }
@@ -4532,6 +4647,481 @@ public partial class Spinner : UserControl
         // Clear pile path
         if (_pilePath != null)
             _pilePath.Data = null;
+    }
+
+
+    double _waveTime = 0;
+    public Brush OceanBrush { get; set; } = new SolidColorBrush(Color.FromRgb(45, 85, 251));
+    public double OceanRiseFallTotal { get; set; } = 15.0; // px
+    public double OceanRiseFallSpeed { get; set; } = 6.0;  // ÷ 10
+    public double OceanScrollSpeed { get; set; } = 10.0;   // ÷ 100
+    public double OceanWaveAmplitude { get; set; } = 20.0;
+    public double OceanWavelength { get; set; } = 200.0;
+    public double OceanOscillationSpeed { get; set; } = 3.2;
+
+    void OnWaveRendering(object? sender, EventArgs e)
+    {
+        if (_pilePath == null) // render may happen before load
+            return;
+
+        _waveTime += OceanScrollSpeed / 100.0; // 0.016
+        RedrawWave(_waveTime);
+    }
+
+    void InitializeWave()
+    {
+        if (_pilePath != null)
+            PART_Canvas.Children.Remove(_pilePath);
+
+        _pilePath = new System.Windows.Shapes.Path
+        {
+            Fill = OceanBrush,
+            Stroke = null,
+            StrokeThickness = 0 // Don’t stroke the bottom edge
+        };
+        PART_Canvas.Children.Add(_pilePath);
+    }
+
+    void RedrawWave(double time)
+    {
+        if (ActualWidth <= 0 || ActualHeight <= 0)
+            return;
+
+        var geo = new StreamGeometry();
+
+        //var fraction = 0.5 + Random.Shared.NextDouble() * 0.01; // 0.5 - 0.501
+        var fraction = 0.6;
+
+        using (var ctx = geo.Open())
+        {
+            // Start at bottom-left
+            ctx.BeginFigure(new Point(0, ActualHeight), isFilled: true, isClosed: true);
+
+            // Move up to first wave point
+            double y0 = WaveY2(0, time, fraction);
+            ctx.LineTo(new Point(0, y0), isStroked: true, isSmoothJoin: false);
+
+            int steps = 80;
+            double stepX = ActualWidth / steps;
+
+            for (int i = 0; i < steps; i++)
+            {
+                double x1 = i * stepX;
+                double y1 = WaveY2(x1, time, fraction);
+
+                double x2 = (i + 1) * stepX;
+                double y2 = WaveY2(x2, time, fraction);
+
+                double mx = (x1 + x2) / 2;
+                double my = (y1 + y2) / 2;
+
+                ctx.QuadraticBezierTo(new Point(x1, y1), new Point(mx, my), true, true);
+            }
+
+            // From last wave point, go straight down to bottom-right
+            ctx.LineTo(new Point(ActualWidth, ActualHeight), isStroked: false, isSmoothJoin: false);
+
+            // *NOTE* The figure will automatically close back to (0, ActualHeight)
+        }
+
+        geo.Freeze();
+        _pilePath.Data = geo;
+    }
+
+    double WaveY(double x, double time, double fraction = 0.6)
+    {
+        // Base waterline
+        double baseY = ActualHeight * fraction; // height % of control
+
+        // Primary sine wave
+        double amplitude = 30;
+        double wavelength = 210;
+        double speed = 2.0;
+
+        double y = baseY + amplitude * Math.Sin((x / wavelength) * Tau + time * speed);
+        if (!OceanOscillationSpeed.IsZeroOrLess())
+        {
+            // Stack secondary wave
+            y += 10 * Math.Sin((x / OceanWavelength) * Tau + time * OceanOscillationSpeed);
+            // [NOTE] "Math.Sin((x / OceanWavelength)" will result in 180° phase shift,
+            // if you want an out of phase effect then add/subtract some amount from
+            // OceanWavelength, e.g. "Math.Sin((x / (OceanWavelength / 3.0))".
+        }
+        return y;
+    }
+
+    double WaveY2(double x, double time, double fraction = 0.6)
+    {
+        // Base waterline
+        double baseY = ActualHeight * fraction;
+
+        // Add vertical oscillation
+        double riseFall = OceanRiseFallTotal * Math.Sin(time * (OceanRiseFallSpeed / 10.0)); // amplitude = 100px, period ~31s (2π / 0.2)
+
+        // A plain sine wave moves fastest at the midpoint and slows at the extremes, but it can feel mechanical.
+        // To exaggerate the linger, we can wrap the sine in an easing function.
+        riseFall = OceanRiseFallTotal * Math.Sin(Math.Sin(time * (OceanRiseFallSpeed / 10.0)));
+
+        // Primary wave
+        double speed = 2.0;
+        double y = (baseY + riseFall) + OceanWaveAmplitude * Math.Sin((x / OceanWavelength) * Tau + time * speed);
+        if (!OceanOscillationSpeed.IsZeroOrLess())
+        {
+            // Stack secondary wave
+            y += 10 * Math.Sin((x / OceanWavelength) * Tau + time * OceanOscillationSpeed);
+            // [NOTE] "Math.Sin((x / OceanWavelength)" will result in 180° phase shift,
+            // if you want an out of phase effect then add/subtract some amount from
+            // OceanWavelength, e.g. "Math.Sin((x / (OceanWavelength / 3.0))".
+        }
+        return y;
+    }
+
+
+    readonly List<System.Windows.Shapes.Path> _waveLayers = new();
+    void OnWavesRendering(object? sender, EventArgs e)
+    {
+        _waveTime += OceanScrollSpeed / 100.0; // 0.016
+        // Background wave (slow, wide, low amplitude)
+        RedrawWaveLayer(_waveLayers[0], _waveTime, ActualHeight * 0.72, 15, 280, 0.5, 0);
+        // Middleground wave
+        RedrawWaveLayer(_waveLayers[1], _waveTime, ActualHeight * 0.65, 25, 200, 1.0, Math.PI / 3);
+        // Foreground wave (fast, choppy, higher amplitude)
+        RedrawWaveLayer(_waveLayers[2], _waveTime, ActualHeight * 0.6, 35, 120, 1.8, Math.PI / 2);
+    }
+
+    void InitializeWaves(int layerCount = 3)
+    {
+        _waveLayers.Clear();
+        PART_Canvas.Children.Clear();
+        var colors = new[] { Colors.SkyBlue, Colors.SteelBlue, Colors.DodgerBlue };
+        for (int i = 0; i < layerCount; i++)
+        {
+            var path = new System.Windows.Shapes.Path
+            {
+                Fill = new SolidColorBrush(colors[i]),
+                Stroke = null,
+                StrokeThickness = 0, // Don’t stroke the bottom edge
+                Opacity = 0.6 - i * 0.15 // further layers more transparent
+            };
+            _waveLayers.Add(path);
+            PART_Canvas.Children.Add(path);
+        }
+    }
+
+    void RedrawWaveLayer(System.Windows.Shapes.Path path, double time, double baseY, double amplitude, double wavelength, double speed, double phase)
+    {
+        var geo = new StreamGeometry();
+
+        using (var ctx = geo.Open())
+        {
+            ctx.BeginFigure(new Point(0, ActualHeight), isFilled: true, isClosed: true);
+
+            // Move up to first wave point
+            double y0 = WaveY(0, time, baseY, amplitude, wavelength, speed, phase);
+            ctx.LineTo(new Point(0, y0), true, false);
+
+            int steps = 80;
+            double stepX = ActualWidth / steps;
+
+            for (int i = 0; i < steps; i++)
+            {
+                double x1 = i * stepX;
+                double y1 = WaveY(x1, time, baseY, amplitude, wavelength, speed, phase);
+
+                double x2 = (i + 1) * stepX;
+                double y2 = WaveY(x2, time, baseY, amplitude, wavelength, speed, phase);
+
+                double mx = (x1 + x2) / 2;
+                double my = (y1 + y2) / 2;
+
+                ctx.QuadraticBezierTo(new Point(x1, y1), new Point(mx, my), true, true);
+            }
+
+            // From last wave point, go straight down to bottom-right
+            ctx.LineTo(new Point(ActualWidth, ActualHeight), false, false);
+        }
+
+        geo.Freeze();
+        path.Data = geo;
+    }
+
+    /// <summary>
+    /// Generalized wave function
+    /// </summary>
+    double WaveY(double x, double time, double baseY, double amplitude, double wavelength, double speed, double phase = 0)
+    {
+        return baseY + amplitude * Math.Sin((x / wavelength) * Tau + time * speed + phase);
+    }
+    #endregion
+
+    #region [Interlocked Gears Mode]
+    RotateTransform rotateGearA;
+    RotateTransform rotateGearB;
+    Storyboard gearStory;
+    public bool GearStyleCog { get; set; } = true;
+    public int GearTeethA { get; set; } = 8;
+    public int GearTeethB { get; set; } = 12;
+    public double GearOutlineThickness { get; set; } = 2;
+    public double GearInnerSpacing { get; set; } = 4;
+    public Brush GearCoreBrush { get; set; } = Brushes.DodgerBlue;
+    public Brush GearOutlineBrush { get; set; } = Brushes.Silver;
+
+    /// <summary>
+    /// This works a bit differently from the rest of the modes since we're<br/>
+    /// rotating two separate geometries inside the <see cref="Canvas"/>.<br/>
+    /// We're not rotating the <see cref="Canvas"/> itself.<br/>
+    /// </summary>
+    void CreateSpinGears(double seconds = 5.0)
+    {
+        double cx = ActualWidth / 2.5;
+        double cy = ActualHeight / 2.0;
+
+        // Define relative radii (like percentages of control size)
+        double baseOuterA = 0.15; // 15% of min dimension
+        double baseOuterB = 0.25; // 25% of min dimension
+
+        // Scale factor based on control size
+        double minDim = Math.Min(ActualWidth, ActualHeight);
+
+        double outerA = baseOuterA * minDim;
+        double innerA = outerA * 0.85;
+        double hubA = outerA * 0.25;
+
+        double outerB = baseOuterB * minDim;
+        double innerB = outerB * 0.85;
+        double hubB = outerB * 0.18;
+
+        // Pitch radii (average of inner/outer)
+        double pitchA = (outerA + innerA) / 2.0;
+        double pitchB = (outerB + innerB) / 2.0;
+
+        double addendum = pitchA * 0.10;  // 10% of pitch radius
+        double dedendum = pitchA * 0.12;  // a touch deeper than addendum
+        double fillet = addendum * 0.1;  // gentle rounding
+
+        // Gear A centered at (0,0), then translated
+        var gearA = new System.Windows.Shapes.Path
+        {
+            Data = GearStyleCog ? CreateCogGear(GearTeethA, pitchA, addendum, dedendum, thicknessFraction: 0.5, fillet: fillet) : CreateToothGear(GearTeethA, outerA, innerA, hubA),
+            Stroke = GearOutlineBrush,
+            Fill = GearCoreBrush,
+            StrokeThickness = GearOutlineThickness
+        };
+        rotateGearA = new RotateTransform { CenterX = 0, CenterY = 0 };
+        var tgA = new TransformGroup();
+        tgA.Children.Add(rotateGearA);
+        tgA.Children.Add(new TranslateTransform(cx, cy));
+        gearA.RenderTransform = tgA;
+        PART_Canvas.Children.Add(gearA);
+
+        // Gear B
+        var gearB = new System.Windows.Shapes.Path
+        {
+            Data = GearStyleCog ? CreateCogGear(GearTeethB, pitchB, addendum * (pitchB / pitchA), dedendum * (pitchB / pitchA), 0.5, fillet * (pitchB / pitchA)) : CreateToothGear(GearTeethB, outerB, innerB, hubB),
+            Stroke = GearOutlineBrush,
+            Fill = GearCoreBrush,
+            StrokeThickness = GearOutlineThickness
+        };
+        rotateGearB = new RotateTransform { CenterX = 0, CenterY = 0 };
+        var tgB = new TransformGroup();
+        tgB.Children.Add(rotateGearB);
+        tgB.Children.Add(new TranslateTransform(cx + pitchA + pitchB + GearInnerSpacing, cy + (outerA / 5.0)));
+        gearB.RenderTransform = tgB;
+        PART_Canvas.Children.Add(gearB);
+
+        // NameScope is required for Storyboard targeting by name
+        NameScope.SetNameScope(this, new NameScope());
+
+        // Register transforms in the window's name scope
+        this.RegisterName("RotateA", rotateGearA);
+        this.RegisterName("RotateB", rotateGearB);
+
+        gearStory = new Storyboard { RepeatBehavior = RepeatBehavior.Forever };
+
+        var animA = new DoubleAnimation
+        {
+            From = 0,
+            To = 360,
+            Duration = TimeSpan.FromSeconds(seconds),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        Storyboard.SetTargetName(animA, "RotateA");
+        Storyboard.SetTargetProperty(animA, new PropertyPath(RotateTransform.AngleProperty));
+        gearStory.Children.Add(animA);
+
+        var animB = new DoubleAnimation
+        {
+            From = 0,
+            To = -180,
+            Duration = TimeSpan.FromSeconds(seconds),
+            RepeatBehavior = RepeatBehavior.Forever
+        };
+        Storyboard.SetTargetName(animB, "RotateB");
+        Storyboard.SetTargetProperty(animB, new PropertyPath(RotateTransform.AngleProperty));
+        gearStory.Children.Add(animB);
+
+        gearStory?.Begin(this); // associate with the window's name scope
+    }
+    #endregion
+
+    #region [Geometry Helpers]
+    Geometry CreateGearGeometry(int teeth = 8, double outerRadius = 50, double innerRadius = 30, double hubRadius = 25)
+    {
+        var geo = new StreamGeometry();
+        using (var ctx = geo.Open())
+        {
+            bool first = true;
+            double angleStep = Tau / (teeth * 2); // tooth + gap
+            for (int i = 0; i < teeth * 2; i++)
+            {
+                double r = (i % 2 == 0) ? outerRadius : innerRadius;
+                double angle = i * angleStep;
+                double x = r * Math.Cos(angle) + outerRadius;
+                double y = r * Math.Sin(angle) + outerRadius;
+                if (first)
+                {
+                    ctx.BeginFigure(new Point(x, y), isFilled: true, isClosed: true);
+                    first = false;
+                }
+                else
+                {
+                    ctx.LineTo(new Point(x, y), isStroked: true, isSmoothJoin: true);
+                }
+            }
+        }
+        geo.Freeze();
+        // Combine with a circular hub cutout
+        var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        group.Children.Add(geo);
+        group.Children.Add(new EllipseGeometry(new Point(outerRadius, outerRadius), hubRadius, hubRadius));
+        return group;
+    }
+
+    Geometry CreateToothGear(int teeth, double outerRadius, double innerRadius, double hubRadius)
+    {
+        var geo = new StreamGeometry();
+        using (var ctx = geo.Open())
+        {
+            bool first = true;
+            double angleStep = Tau / (teeth * 2);
+            for (int i = 0; i < teeth * 2; i++)
+            {
+                double r = (i % 2 == 0) ? outerRadius : innerRadius;
+                double angle = i * angleStep;
+                double x = r * Math.Cos(angle);
+                double y = r * Math.Sin(angle);
+
+                if (first)
+                {
+                    ctx.BeginFigure(new Point(x, y), true, true);
+                    first = false;
+                }
+                else
+                {
+                    ctx.LineTo(new Point(x, y), true, true);
+                }
+            }
+        }
+        geo.Freeze();
+        var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        group.Children.Add(geo);
+        group.Children.Add(new EllipseGeometry(new Point(0, 0), hubRadius, hubRadius));
+        return group;
+    }
+
+    /// <summary>
+    /// Generates a cog-like gear. Flat tooth tops, symmetric flanks, rounded roots.
+    /// </summary>
+    /// <param name="teeth">number of teeth</param>
+    /// <param name="pitchRadius">nominal pitch circle (center of tooth thickness)</param>
+    /// <param name="addendum">height from pitch to tooth tip (outer)</param>
+    /// <param name="dedendum">height from pitch to tooth root (inner)</param>
+    /// <param name="thicknessFraction">fraction of pitch angle occupied by the flat tooth top (0.4–0.6 looks good)</param>
+    /// <param name="fillet">corner radius for root rounding (0 = sharp)</param>
+    Geometry CreateCogGear(int teeth, double pitchRadius, double addendum, double dedendum, double thicknessFraction = 0.5, double fillet = 0)
+    {
+        double rTip = pitchRadius + addendum;     // outer circle
+        double rRoot = pitchRadius - dedendum;    // inner circle
+        double pitchStep = 2 * Math.PI / teeth;   // angle between teeth
+        double halfTop = thicknessFraction * pitchStep * 0.5; // half-width of flat top (angle)
+
+        var sg = new StreamGeometry();
+        using (var ctx = sg.Open())
+        {
+            bool first = true;
+
+            for (int i = 0; i < teeth; i++)
+            {
+                double θc = i * pitchStep; // tooth center angle
+
+                // Corner angles (symmetric around θc):
+                double θTopL = θc - halfTop;             // left edge of flat top
+                double θTopR = θc + halfTop;             // right edge of flat top
+                double θRootL = θc - (pitchStep * 0.5);  // left root midpoint between teeth
+                double θRootR = θc + (pitchStep * 0.5);  // right root midpoint
+
+                // Points:
+                Point P_rootL = Polar(rRoot, θRootL);
+                Point P_flankL = Polar(rTip, θTopL);
+                Point P_topR = Polar(rTip, θTopR);
+                Point P_rootR = Polar(rRoot, θRootR);
+
+                // Begin on the left root and walk around the tooth clockwise:
+                if (first)
+                {
+                    ctx.BeginFigure(P_rootL, isFilled: true, isClosed: true);
+                    first = false;
+                }
+                else
+                {
+                    ctx.LineTo(P_rootL, isStroked: true, isSmoothJoin: true);
+                }
+
+                // Optional root fillet: small arc from root-left → flank-left
+                if (fillet > 0)
+                {
+                    var arcStart = Polar(rRoot, θRootL + FilletDelta(rRoot, fillet));
+                    ctx.ArcTo(arcStart,
+                        new Size(fillet, fillet),
+                        rotationAngle: 0,
+                        isLargeArc: false,
+                        sweepDirection: SweepDirection.Clockwise,
+                        isStroked: true,
+                        isSmoothJoin: true);
+                }
+
+                // Left flank up to flat top start
+                ctx.LineTo(P_flankL, isStroked: true, isSmoothJoin: true);
+
+                // Flat top across the tooth
+                ctx.LineTo(P_topR, isStroked: true, isSmoothJoin: true);
+
+                // Right flank down to root-right
+                ctx.LineTo(P_rootR, isStroked: true, isSmoothJoin: true);
+
+                // Optional root fillet: small arc from root-right → next tooth’s left root
+                if (fillet > 0)
+                {
+                    var arcEnd = Polar(rRoot, θRootR + FilletDelta(rRoot, fillet));
+                    ctx.ArcTo(arcEnd,
+                        new Size(fillet, fillet),
+                        rotationAngle: 0,
+                        isLargeArc: false,
+                        sweepDirection: SweepDirection.Clockwise,
+                        isStroked: true,
+                        isSmoothJoin: true);
+                }
+            }
+        }
+        sg.Freeze();
+
+        var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        group.Children.Add(sg);
+        group.Children.Add(new EllipseGeometry(new Point(0, 0), pitchRadius * 0.35, pitchRadius * 0.35)); // hub
+        return group;
+        // Helpers
+        static Point Polar(double r, double a) => new Point(r * Math.Cos(a), r * Math.Sin(a));
+        static double FilletDelta(double r, double f) => Math.Asin(Math.Min(1.0, f / Math.Max(1e-6, r)));
     }
     #endregion
 

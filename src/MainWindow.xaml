@@ -322,9 +322,15 @@
                 DotBrush="{StaticResource SnowBrushRadial}"
                 DotCount="40"
                 DotSize="5"
+                OceanBrush="{StaticResource OceanBrushLinear}"
+                OceanOscillationSpeed="4.2"
+                OceanRiseFallSpeed="8"
+                OceanRiseFallTotal="10"
+                OceanScrollSpeed="5"
+                OceanWaveAmplitude="12"
+                OceanWavelength="100"
                 RenderMode="AnimatePositions"
-                RenderShape="Twinkle1"
-                TwinkleSpeed="8" />
+                RenderShape="Ocean" />
 
             <!--  Sand  -->
             <ctrl:Spinner
@@ -447,8 +453,10 @@
                 BorderBrush="{StaticResource SampleBorderBrush}"
                 BorderThickness="1"
                 DotBrush="{StaticResource SnowBrushRadial}"
-                DotCount="20"
-                DotSize="12"
+                DotCount="12"
+                DotSize="16"
+                PolyName="star"
+                PolyPointOutward="True"
                 RenderMode="AnimatePositions"
                 RenderShape="Polys"
                 WaveDuration="3" />
@@ -474,7 +482,7 @@
                 FireworkBrush3="{StaticResource FireworkBrushRadial3}"
                 FireworkExplosionSpeed="1"
                 FireworkGravity="1.4"
-                FireworkLifetime="30"
+                FireworkLifetime="22"
                 FireworkParticleCount="5"
                 RenderMode="AnimatePositions"
                 RenderShape="Fireworks" />
