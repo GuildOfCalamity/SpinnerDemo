@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SpinnerDemo.Controls;
 
@@ -525,7 +526,7 @@ public partial class Spinner : UserControl
                     break;
                 case "bell": poly = Geometry.Parse("M 6,0 C 2,0 2,6 2,10 L 2,14 10,14 10,10 C 10,6 10,0 6,0 Z M 4,16 A 2,2 0 1 0 8,16");
                     break;
-                case "gear": poly = CreateGearGeometry();
+                case "gear": poly = CreateToothGear(8, 30, 20, 15);
                     break;
                 case "sun": poly = Geometry.Parse("M 6,0 L 6,2 M 6,10 L 6,12 M 0,6 L 2,6 M 10,6 L 12,6 M 2,2 L 3,3 M 9,9 L 10,10 M 2,10 L 3,9 M 9,3 L 10,2 M 6,4 A 2,2 0 1 1 5.999,4 Z");
                     break;
@@ -4038,27 +4039,56 @@ public partial class Spinner : UserControl
 
 
 
+    #region [Local Fisher-Yates Randomization]
+    Queue<Brush> _brushQueue;
+    void InitBrushQueue()
+    {
+        if (_brushes == null)
+            _brushes = new List<Brush> { FireworkBrush1, FireworkBrush2, FireworkBrush3, FireworkBrush4, FireworkBrush5 };
+
+        _brushQueue = new Queue<Brush>(_brushes.OrderBy(_ => Random.Shared.Next()));
+    }
+    Brush? GetNextBrush()
+    {
+        if (_brushQueue == null || _brushQueue.Count == 0)
+            InitBrushQueue();
+
+        return _brushQueue?.Dequeue();
+    }
+    #endregion
+
+    ShuffleBag<Brush> _brushBag;
     List<FireworkDot> _fireworks;
+    List<Brush> _brushes;
     public int FireworkParticleCount { get; set; } = 5;
     public double FireworkBaseSpeed { get; set; } = 3.0;
     public double FireworkExplosionSpeed { get; set; } = 1.0;
     public double FireworkGravity { get; set; } = 1.9;
+    public double FireworkApexDrag { get; set; } = 2.0;
+    public double FireworkSideDrift { get; set; } = 2.5;
+    public bool FireworkParticlePulse { get; set; } = false;
     public int FireworkLifetime { get; set; } = 30;
     public Brush FireworkBrush1 { get; set; } = new SolidColorBrush(Color.FromRgb(250, 200, 10));
-    public Brush FireworkBrush2 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 250, 160));
-    public Brush FireworkBrush3 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 160, 250));
+    public Brush FireworkBrush2 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 250, 120));
+    public Brush FireworkBrush3 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 120, 250));
+    public Brush FireworkBrush4 { get; set; } = new SolidColorBrush(Color.FromRgb(10, 220, 250));
+    public Brush FireworkBrush5 { get; set; } = new SolidColorBrush(Color.FromRgb(250, 10, 120));
     void CreateFireworkDots()
     {
         if (_fireworks == null)
             _fireworks = new List<FireworkDot>();
         if (_splash == null)
             _splash = new List<SplashParticle>();
+        if (_brushBag == null)
+            _brushBag = new ShuffleBag<Brush>(new List<Brush> { FireworkBrush1, FireworkBrush2, FireworkBrush3, FireworkBrush4, FireworkBrush5 });
 
         // Constrain to middle 60% of control's width for spawning
         double margin = ActualWidth * 0.2;
         double usableWidth = ActualWidth * 0.6;
 
-        for (int i = 0; i < DotCount; i++)
+        int total = Math.Max(1, Random.Shared.Next(DotCount));
+
+        for (int i = 0; i < total; i++)
         {
             double x = margin + Random.Shared.NextDouble() * usableWidth;
             var dot = new Ellipse
@@ -4074,7 +4104,7 @@ public partial class Spinner : UserControl
 
             // Launch upward with some velocity
             double vy = -(FireworkBaseSpeed + Random.Shared.NextDouble() * FireworkBaseSpeed); // upward
-            double vx = (Random.Shared.NextDouble() - 0.5) * 2.0; // sideways drift
+            double vx = (Random.Shared.NextDouble() - 0.5) * Math.Max(1.0, FireworkSideDrift); // sideways drift
 
             // Random apex height (somewhere between 30% and 60% of canvas height)
             //double apexY = ActualHeight * (0.3 + Random.Shared.NextDouble() * 0.3);
@@ -4085,7 +4115,7 @@ public partial class Spinner : UserControl
             //// Apex between 20% and 40% of height
             //double apexY = ActualHeight * (minRatio + Random.Shared.NextDouble() * (maxRatio - minRatio));
 
-            if (FireworkGravity <= 0)
+            if (IsZeroOrLess(FireworkGravity))
                 FireworkGravity = 1;
 
             // Gravity strength (should match update loop)
@@ -4096,7 +4126,7 @@ public partial class Spinner : UserControl
              *   ⮞ Slower launches ═ lower arcs
              */
             // Physics-based apex offset
-            double apexOffset = (vy * vy) / (2.0 * g);
+            double apexOffset = (vy * vy) / (Math.Max(0.5, FireworkApexDrag) * g);
             // Apex Y = starting Y - offset
             double apexY = (ActualHeight - (dot.Height + 1.0)) - apexOffset;
 
@@ -4106,13 +4136,15 @@ public partial class Spinner : UserControl
             apexY = Math.Min(Math.Max(apexY, minY), maxY);
 
             // Add a little randomness so not all arcs are identical
-            apexY *= (0.9 + Random.Shared.NextDouble() * 0.2);
+            apexY *= (0.9 + Random.Shared.NextDouble() * 0.15);
 
             _fireworks.Add(new FireworkDot
             {
                 Dot = dot,
-                X = x, Y = ActualHeight - dot.Height,
-                VX = vx, VY = vy,
+                X = x,
+                Y = ActualHeight - dot.Height,
+                VX = vx,
+                VY = vy,
                 ApexY = apexY
             });
         }
@@ -4141,32 +4173,33 @@ public partial class Spinner : UserControl
             {
                 PART_Canvas.Children.Remove(ld.Dot);
                 _fireworks.RemoveAt(i);
-                SpawnExplosion(ld.X, ld.Y);
+                SpawnExplosion(ld.X, ld.Y, ld);
             }
         }
 
         UpdateExplosionParticles();
     }
 
-    void SpawnExplosion(double x, double y)
+    Brush? selected; // brush selection for explosions
+    void SpawnExplosion(double x, double y, FireworkDot fd)
     {
         int count = FireworkParticleCount + Random.Shared.Next(FireworkParticleCount);
-
-        Brush selected = Random.Shared.NextDouble() switch
-        {
-            > 0.65 => FireworkBrush1,
-            > 0.32 => FireworkBrush2,
-            _ => FireworkBrush3,
-        };
+        
+        // Avoid the uniform random selection with replacement (repeats expected)
+        //Brush? selected = GetNextBrush();
+        //Brush selected = Random.Shared.NextDouble() switch { >= 0.8 => FireworkBrush5, >= 0.6 => FireworkBrush4, >= 0.4 => FireworkBrush3, > 0.2 => FireworkBrush2, _ => FireworkBrush1 };
+        Brush selected = _brushBag.Next();
 
         for (int i = 0; i < count; i++)
         {
             double angle = Random.Shared.NextDouble() * Tau;
             double speed = FireworkExplosionSpeed + Random.Shared.NextDouble() * 4.0;
+            var dotSize = Math.Max(fd.Dot.ActualWidth, fd.Dot.ActualHeight);
+            var size = (dotSize / 2.0) + (Random.Shared.NextDouble() * dotSize);
             var dot = new Ellipse
             {
-                Width = (DotSize / 2.0) + Random.Shared.NextDouble() * DotSize,
-                Height = (DotSize / 2.0) + Random.Shared.NextDouble() * DotSize,
+                Width = size,
+                Height = size,
                 Fill = selected,
                 Opacity = 1.0
             };
@@ -4176,11 +4209,15 @@ public partial class Spinner : UserControl
             _splash.Add(new SplashParticle
             {
                 Dot = dot,
-                X = x, Y = y,
-                VX = Math.Cos(angle) * speed, VY = Math.Sin(angle) * speed,
-                Age = 0, Lifetime = FireworkLifetime + Random.Shared.Next(FireworkLifetime)
+                X = x,
+                Y = y,
+                VX = Math.Cos(angle) * speed,
+                VY = Math.Sin(angle) * speed,
+                Age = 0,
+                Lifetime = FireworkLifetime + Random.Shared.Next(FireworkLifetime)
             });
         }
+        //Debug.WriteLine($"[INFO] Current particle count: {_splash.Count}");
     }
 
     void UpdateExplosionParticles()
@@ -4231,7 +4268,8 @@ public partial class Spinner : UserControl
             double opacity = (1.0 - t) * edgeFade;
             sp.Dot.Opacity = opacity;
 
-            double size = Math.Max(1, DotSize * (1.0 - t));
+            //double size = Math.Max(1, DotSize * (1.0 - t));
+            double size = FireworkParticlePulse ? Math.Max(1, ((DotSize / 1.5) + (double)Random.Shared.Next((int)DotSize)) * (1.0 - t)) : Math.Max(1, (DotSize * 1.2) * (1.0 - t));
             sp.Dot.Width = size;
             sp.Dot.Height = size;
 
@@ -4252,7 +4290,6 @@ public partial class Spinner : UserControl
             }
         }
     }
-
 
 
     public Brush SandBrush { get; set; } = new SolidColorBrush(Color.FromRgb(165, 85, 21));
@@ -4316,7 +4353,7 @@ public partial class Spinner : UserControl
             double size = 2.0 + Random.Shared.NextDouble() * 2.0;
             double y = 0; // y = -size; // start slightly above view
             double x = 0;
-            if (SandJitter.IsZeroOrLess())
+            if (IsZeroOrLess(SandJitter))
                 x = xCenter + (Random.Shared.NextDouble() * 2 - 1) * GetCurrentJitter(); // auto-jitter
             else
                 x = xCenter + (Random.Shared.NextDouble() * 2 - 1) * SandJitter;
@@ -4594,7 +4631,7 @@ public partial class Spinner : UserControl
         // Base slope range
         double baseSlope = SandSlopeMin + (SandSlopeMax - SandSlopeMin) * eased;
 
-        // Scale slope by width: narrower control → flatter slope
+        // Scale slope by width: narrower control ⇨ flatter slope
         double widthFactor = 0;
         if (_sandWidth == _sandBottomY)
             widthFactor = _sandWidth / 1000.0; // 400px is a "reference width"
@@ -4739,7 +4776,7 @@ public partial class Spinner : UserControl
         double speed = 2.0;
 
         double y = baseY + amplitude * Math.Sin((x / wavelength) * Tau + time * speed);
-        if (!OceanOscillationSpeed.IsZeroOrLess())
+        if (!IsZeroOrLess(OceanOscillationSpeed))
         {
             // Stack secondary wave
             y += 10 * Math.Sin((x / OceanWavelength) * Tau + time * OceanOscillationSpeed);
@@ -4765,7 +4802,7 @@ public partial class Spinner : UserControl
         // Primary wave
         double speed = 2.0;
         double y = (baseY + riseFall) + OceanWaveAmplitude * Math.Sin((x / OceanWavelength) * Tau + time * speed);
-        if (!OceanOscillationSpeed.IsZeroOrLess())
+        if (!IsZeroOrLess(OceanOscillationSpeed))
         {
             // Stack secondary wave
             y += 10 * Math.Sin((x / OceanWavelength) * Tau + time * OceanOscillationSpeed);
@@ -4965,7 +5002,7 @@ public partial class Spinner : UserControl
     #endregion
 
     #region [Geometry Helpers]
-    Geometry CreateGearGeometry(int teeth = 8, double outerRadius = 50, double innerRadius = 30, double hubRadius = 25)
+    Geometry CreateGearGeometry(int teeth, double outerRadius, double innerRadius, double hubRadius, Point center)
     {
         var geo = new StreamGeometry();
         using (var ctx = geo.Open())
@@ -4976,8 +5013,9 @@ public partial class Spinner : UserControl
             {
                 double r = (i % 2 == 0) ? outerRadius : innerRadius;
                 double angle = i * angleStep;
-                double x = r * Math.Cos(angle) + outerRadius;
-                double y = r * Math.Sin(angle) + outerRadius;
+                double x = center.X + r * Math.Cos(angle);
+                double y = center.Y + r * Math.Sin(angle);
+
                 if (first)
                 {
                     ctx.BeginFigure(new Point(x, y), isFilled: true, isClosed: true);
@@ -4990,10 +5028,10 @@ public partial class Spinner : UserControl
             }
         }
         geo.Freeze();
-        // Combine with a circular hub cutout
+        // Combine with hub cutout
         var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
         group.Children.Add(geo);
-        group.Children.Add(new EllipseGeometry(new Point(outerRadius, outerRadius), hubRadius, hubRadius));
+        group.Children.Add(new EllipseGeometry(center, hubRadius, hubRadius));
         return group;
     }
 
@@ -5010,7 +5048,6 @@ public partial class Spinner : UserControl
                 double angle = i * angleStep;
                 double x = r * Math.Cos(angle);
                 double y = r * Math.Sin(angle);
-
                 if (first)
                 {
                     ctx.BeginFigure(new Point(x, y), true, true);
@@ -5040,6 +5077,20 @@ public partial class Spinner : UserControl
     /// <param name="fillet">corner radius for root rounding (0 = sharp)</param>
     Geometry CreateCogGear(int teeth, double pitchRadius, double addendum, double dedendum, double thicknessFraction = 0.5, double fillet = 0)
     {
+        /*
+        // Root circle points (tooth gaps). Root points define the bottom of the gap between teeth.
+        Point rootL = Polar(rDed, toothCenter - pitchAngle / 2);
+        Point rootR = Polar(rDed, toothCenter + pitchAngle / 2);
+
+        // Pitch circle (for reference, not always drawn). Pitch points are where the involute curve passes through.
+        Point pitchL = Polar(rPitch, toothCenter - halfToothAngle);
+        Point pitchR = Polar(rPitch, toothCenter + halfToothAngle);
+        
+        // Addendum circle (tooth tips). Addendum points are the ends of the tooth tip arc.
+        Point tipL = Polar(rAdd, toothCenter - halfTopAngle);
+        Point tipR = Polar(rAdd, toothCenter + halfTopAngle);
+        */
+
         double rTip = pitchRadius + addendum;     // outer circle
         double rRoot = pitchRadius - dedendum;    // inner circle
         double pitchStep = 2 * Math.PI / teeth;   // angle between teeth
@@ -5060,7 +5111,7 @@ public partial class Spinner : UserControl
                 double θRootL = θc - (pitchStep * 0.5);  // left root midpoint between teeth
                 double θRootR = θc + (pitchStep * 0.5);  // right root midpoint
 
-                // Points:
+                // Points
                 Point P_rootL = Polar(rRoot, θRootL);
                 Point P_flankL = Polar(rTip, θTopL);
                 Point P_topR = Polar(rTip, θTopR);
@@ -5077,7 +5128,7 @@ public partial class Spinner : UserControl
                     ctx.LineTo(P_rootL, isStroked: true, isSmoothJoin: true);
                 }
 
-                // Optional root fillet: small arc from root-left → flank-left
+                // Optional root fillet: small arc from root-left ⇨ flank-left
                 if (fillet > 0)
                 {
                     var arcStart = Polar(rRoot, θRootL + FilletDelta(rRoot, fillet));
@@ -5099,17 +5150,11 @@ public partial class Spinner : UserControl
                 // Right flank down to root-right
                 ctx.LineTo(P_rootR, isStroked: true, isSmoothJoin: true);
 
-                // Optional root fillet: small arc from root-right → next tooth’s left root
+                // Optional root fillet: small arc from root-right ⇨ next tooth’s left root
                 if (fillet > 0)
                 {
                     var arcEnd = Polar(rRoot, θRootR + FilletDelta(rRoot, fillet));
-                    ctx.ArcTo(arcEnd,
-                        new Size(fillet, fillet),
-                        rotationAngle: 0,
-                        isLargeArc: false,
-                        sweepDirection: SweepDirection.Clockwise,
-                        isStroked: true,
-                        isSmoothJoin: true);
+                    ctx.ArcTo(arcEnd, new Size(fillet, fillet), rotationAngle: 0, isLargeArc: false, sweepDirection: SweepDirection.Clockwise, isStroked: true, isSmoothJoin: true);
                 }
             }
         }
@@ -5119,9 +5164,52 @@ public partial class Spinner : UserControl
         group.Children.Add(sg);
         group.Children.Add(new EllipseGeometry(new Point(0, 0), pitchRadius * 0.35, pitchRadius * 0.35)); // hub
         return group;
-        // Helpers
-        static Point Polar(double r, double a) => new Point(r * Math.Cos(a), r * Math.Sin(a));
-        static double FilletDelta(double r, double f) => Math.Asin(Math.Min(1.0, f / Math.Max(1e-6, r)));
+    }
+
+    #endregion
+
+    #region [Animation Helpers]
+    /// <summary><code>
+    ///   /* animate three shapes independently */
+    ///   StartShapeBrushAnimation(myEllipse, 2.0);
+    ///   StartShapeBrushAnimation(myRectangle, 3.5);
+    ///   StartShapeBrushAnimation(myPolygon, 5.0);
+    /// </code></summary>
+    /// <param name="shape"></param>
+    /// <param name="intervalSeconds"></param>
+    void StartShapeBrushAnimation(Shape shape, double intervalSeconds)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(intervalSeconds) };
+        timer.Tick += (s, e) =>
+        {
+            var nextBrush = GetNextBrush();
+            AnimateSolidBrushFill(shape, nextBrush); // smooth fade
+        };
+        timer.Start();
+    }
+
+    void AnimateSolidBrushFill(Shape shape, Brush targetBrush, double seconds = 0.5)
+    {
+        if (shape.Fill is SolidColorBrush fromBrush && targetBrush is SolidColorBrush toBrush)
+        {
+            var anim = new ColorAnimation
+            {
+                From = fromBrush.Color,
+                To = toBrush.Color,
+                Duration = TimeSpan.FromSeconds(seconds),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
+            };
+
+            // Ensure the brush is mutable
+            var animatedBrush = new SolidColorBrush(fromBrush.Color);
+            shape.Fill = animatedBrush;
+            animatedBrush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
+        }
+        else
+        {
+            // Fallback: just swap instantly
+            shape.Fill = targetBrush;
+        }
     }
     #endregion
 
@@ -5265,9 +5353,36 @@ public partial class Spinner : UserControl
 
     #region [Angle Helpers]
     /// <summary>
+    /// Converts polar coordinates (radius + angle) into a <see cref="Point"/> in Cartesian coordinates (x,y).
+    /// </summary>
+    /// <param name="r">distance from the origin (radius)</param>
+    /// <param name="a">angle from the positive X‑axis (in radians)</param>
+    /// <returns><see cref="Point"/></returns>
+    static Point Polar(double r, double a)
+    {
+        return new Point(r * Math.Cos(a), r * Math.Sin(a));
+    }
+
+    /// <summary>
+    /// When you add a fillet (a rounded corner) between two straight/curved segments,<br/>
+    /// you need to know how far along the circle to swing before the arc starts.<br/>
+    /// f/r = ratio of fillet radius to circle radius, this helper method converts<br/>
+    /// that ratio into the angle(in radians) and clamps so we don’t pass a value<br/>
+    /// greater than 1 into Math.Asin().<br/>
+    /// </summary>
+    /// <param name="r">circle of radius</param>
+    /// <param name="f">fillet of radius</param>
+    /// <returns><see cref="Double"/></returns>
+    static double FilletDelta(double r, double f)
+    {
+        return Math.Asin(Math.Min(1.0, f / Math.Max(1e-6, r)));
+    }
+
+    /// <summary>
     /// Converts a total angle (in <paramref name="degrees"/>) into radians for use as a cone width.<br/>
     /// Example: 60 ⇨ Math.PI ÷ 3<br/>
     /// </summary>
+    /// <returns><see cref="Double"/></returns>
     static double DegreesToRadians(double degrees)
     {
         return degrees * Math.PI / 180.0;
@@ -5691,5 +5806,115 @@ class StarStateWithColor
     public Color StartColor;
     public Color MidColor;
     public Color EndColor;
+}
+
+/// <summary>
+/// Fisher-Yates randomization class.<br/>
+/// Ensures a cycle through all given <typeparamref name="T"/> in a random order<br/>
+/// before repeating; which feels much more "random" than independent picks.<br/>
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public class ShuffleBag<T>
+{
+    int _index;
+    readonly List<T> _items;
+
+    public ShuffleBag(IEnumerable<T> items)
+    {
+        _items = new List<T>(items);
+        Shuffle();
+    }
+
+    public T Next()
+    {
+        if (_index >= _items.Count)
+            Shuffle();
+
+        return _items[_index++];
+    }
+
+    void Shuffle()
+    {
+        for (int i = _items.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (_items[i], _items[j]) = (_items[j], _items[i]);
+        }
+        _index = 0;
+    }
+
+    public static void TestShuffle()
+    {
+        var _values = new List<string>
+        {
+            { "Red"    },
+            { "Blue"   },
+            { "Green"  },
+            { "Yellow" },
+            { "Orange" }
+        };
+        ShuffleBag<string> _sbag = new ShuffleBag<string>(_values);
+        for (int i = 0; i < 100; i++)
+        {
+            System.Diagnostics.Debug.WriteLine(_sbag.Next());
+        }
+    }
+}
+
+/// <summary>
+/// Fisher-Yates randomization class (weighted).<br/>
+/// Ensures a cycle through all given <typeparamref name="T"/> in a random order<br/>
+/// before repeating; which feels much more "random" than independent picks.<br/>
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public class WeightedShuffleBag<T>
+{
+    int _index;
+    readonly List<T> _items = new List<T>();
+
+    public WeightedShuffleBag(Dictionary<T, int> weights)
+    {
+        foreach (var kvp in weights)
+        {
+            for (int i = 0; i < kvp.Value; i++)
+                _items.Add(kvp.Key);
+        }
+        Shuffle();
+    }
+
+    public T Next()
+    {
+        if (_index >= _items.Count)
+            Shuffle();
+
+        return _items[_index++];
+    }
+
+    void Shuffle()
+    {
+        for (int i = _items.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (_items[i], _items[j]) = (_items[j], _items[i]);
+        }
+        _index = 0;
+    }
+
+    public static void TestWeightedShuffle()
+    {
+        var _weights = new Dictionary<string, int>
+        {
+            { "Red",    3 }, // appears 3x as often
+            { "Blue",   1 },
+            { "Green",  2 }, // appears 2x as often
+            { "Yellow", 1 },
+            { "Orange", 1 }
+        };
+        WeightedShuffleBag<string> _wbag = new WeightedShuffleBag<string>(_weights);
+        for (int i = 0; i < 100; i++)
+        {
+            System.Diagnostics.Debug.WriteLine(_wbag.Next());
+        }
+    }
 }
 #endregion

@@ -1114,18 +1114,18 @@ public static class Extensions
 
     #region [Easing Functions]
 
-    // Quadratic Easing (t²): EaseInQuadratic → Starts slow, speeds up.
+    // Quadratic Easing (t²): EaseInQuadratic ⇨ Starts slow, speeds up.
     public static double EaseInQuadratic(double t) => t * t;
-    // EaseOutQuadratic → Starts fast, slows down.
+    // EaseOutQuadratic ⇨ Starts fast, slows down.
     public static double EaseOutQuadratic(double t) => 1.0 - (1.0 - t) * (1.0 - t);
-    // EaseInOutQuadratic → Symmetric acceleration-deceleration.
+    // EaseInOutQuadratic ⇨ Symmetric acceleration-deceleration.
     public static double EaseInOutQuadratic(double t) => t < 0.5 ? 2.0 * t * t : 1.0 - Math.Pow(-2.0 * t + 2.0, 2.0) / 2.0;
 
-    // Cubic Easing (t³): EaseInCubic → Stronger acceleration.
+    // Cubic Easing (t³): EaseInCubic ⇨ Stronger acceleration.
     public static double EaseInCubic(double t) => Math.Pow(t, 3.0);
-    // EaseOutCubic → Slower deceleration.
+    // EaseOutCubic ⇨ Slower deceleration.
     public static double EaseOutCubic(double t) => 1.0 - Math.Pow(1.0 - t, 3.0);
-    // EaseInOutCubic → Balanced smooth curve.
+    // EaseInOutCubic ⇨ Balanced smooth curve.
     public static double EaseInOutCubic(double t) => t < 0.5 ? 4.0 * Math.Pow(t, 3.0) : 1.0 - Math.Pow(-2.0 * t + 2.0, 3.0) / 2.0;
 
     // Quartic Easing (t⁴): Sharper transition than cubic easing.
